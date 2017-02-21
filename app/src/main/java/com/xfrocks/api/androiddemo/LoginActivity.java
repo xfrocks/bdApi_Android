@@ -1,7 +1,5 @@
 package com.xfrocks.api.androiddemo;
 
-import android.Manifest;
-import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
@@ -9,11 +7,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.IntentSender;
-import android.content.pm.PackageManager;
 import android.net.Uri;
-import android.os.AsyncTask;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.annotation.NonNull;
@@ -37,12 +31,12 @@ import com.facebook.FacebookException;
 import com.facebook.FacebookSdk;
 import com.facebook.login.LoginManager;
 import com.facebook.login.LoginResult;
-import com.google.android.gms.auth.GoogleAuthUtil;
+import com.google.android.gms.auth.api.Auth;
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
+import com.google.android.gms.auth.api.signin.GoogleSignInResult;
 import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.Scopes;
 import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.common.api.Scope;
-import com.google.android.gms.plus.Plus;
 import com.twitter.sdk.android.Twitter;
 import com.twitter.sdk.android.core.Callback;
 import com.twitter.sdk.android.core.Result;
@@ -67,24 +61,20 @@ import io.fabric.sdk.android.Fabric;
  * A login screen that offers login via email/password.
  */
 public class LoginActivity extends AppCompatActivity
-        implements GoogleApiClient.ConnectionCallbacks,
-        GoogleApiClient.OnConnectionFailedListener,
+        implements GoogleApiClient.OnConnectionFailedListener,
         TfaDialogFragment.TfaDialogListener {
 
     public static final String EXTRA_REDIRECT_TO = "redirect_to";
     private static final String STATE_FACEBOOK_SIGN_IN = "facebookSignIn";
     private static final String STATE_TWITTER_SIGN_IN = "twitterSignIn";
     private static final String STATE_GOOGLE_SIGN_IN = "googleSignIn";
-    private static final int RC_GOOGLE_API_RESOLVE = 1;
     private static final int RC_REGISTER = 2;
-    private static final int RC_LOGIN_GOOGLE_PERM_GET_ACCOUNTS = 3;
+    private static final int RC_GOOGLE_SIGN_IN = 4;
 
     private TokenRequest mTokenRequest;
     private BroadcastReceiver mGcmReceiver;
 
     private GoogleApiClient mGoogleApiClient;
-    private boolean mGoogleApiIsResolving = false;
-    private boolean mGoogleApiShouldResolve = false;
 
     private CallbackManager mFacebookCallbackManager;
 
@@ -108,11 +98,13 @@ public class LoginActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
 
+        GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestEmail()
+                .requestIdToken(getString(R.string.default_web_client_id))
+                .build();
         mGoogleApiClient = new GoogleApiClient.Builder(this)
-                .addConnectionCallbacks(this)
-                .addOnConnectionFailedListener(this)
-                .addApi(Plus.API)
-                .addScope(new Scope(Scopes.PROFILE))
+                .enableAutoManage(this, this)
+                .addApi(Auth.GOOGLE_SIGN_IN_API, gso)
                 .build();
 
         mEmailView = (EditText) findViewById(R.id.email);
@@ -291,14 +283,6 @@ public class LoginActivity extends AppCompatActivity
         }
 
         switch (requestCode) {
-            case RC_GOOGLE_API_RESOLVE:
-                if (resultCode == RESULT_OK) {
-                    mGoogleApiShouldResolve = false;
-                }
-
-                mGoogleApiIsResolving = false;
-                mGoogleApiClient.connect();
-                break;
             case RC_REGISTER:
                 if (resultCode == RESULT_OK
                         && data.hasExtra(RegisterActivity.RESULT_EXTRA_ACCESS_TOKEN)) {
@@ -308,20 +292,10 @@ public class LoginActivity extends AppCompatActivity
                     }
                 }
                 break;
-        }
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        switch (requestCode) {
-            case RC_LOGIN_GOOGLE_PERM_GET_ACCOUNTS:
-                if (grantResults.length == 1
-                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    attemptLoginGoogle();
-                }
+            case RC_GOOGLE_SIGN_IN:
+                GoogleSignInResult result = Auth.GoogleSignInApi.getSignInResultFromIntent(data);
+                attemptLoginGoogle(result);
                 break;
-            default:
-                super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         }
     }
 
@@ -438,36 +412,26 @@ public class LoginActivity extends AppCompatActivity
     }
 
     private void attemptLoginGoogle() {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-            int hasPerm = checkSelfPermission(android.Manifest.permission.GET_ACCOUNTS);
+        Intent signInIntent = Auth.GoogleSignInApi.getSignInIntent(mGoogleApiClient);
+        startActivityForResult(signInIntent, RC_GOOGLE_SIGN_IN);
+    }
 
-            if (hasPerm != PackageManager.PERMISSION_GRANTED) {
-                if (!shouldShowRequestPermissionRationale(android.Manifest.permission.GET_ACCOUNTS)) {
-                    new AlertDialog.Builder(this)
-                            .setMessage(R.string.action_sign_in_google_get_accounts)
-                            .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-                                @SuppressLint("NewApi")
-                                @Override
-                                public void onClick(DialogInterface dialogInterface, int i) {
-                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                                        requestPermissions(new String[]{Manifest.permission.GET_ACCOUNTS},
-                                                RC_LOGIN_GOOGLE_PERM_GET_ACCOUNTS);
-                                    }
-                                }
-                            })
-                            .setNegativeButton(android.R.string.cancel, null)
-                            .show();
-                    return;
-                }
-
-                requestPermissions(new String[]{android.Manifest.permission.GET_ACCOUNTS},
-                        RC_LOGIN_GOOGLE_PERM_GET_ACCOUNTS);
-                return;
-            }
+    private void attemptLoginGoogle(GoogleSignInResult result) {
+        if (!result.isSuccess()) {
+            return;
         }
 
-        mGoogleApiShouldResolve = true;
-        mGoogleApiClient.connect();
+        GoogleSignInAccount account = result.getSignInAccount();
+        if (account == null) {
+            return;
+        }
+
+        String token = account.getIdToken();
+        if (TextUtils.isEmpty(token)) {
+            return;
+        }
+
+        new TokenGoogleRequest(token).start();
     }
 
     private void attemptLogin(String tfaProviderId, String tfaProviderCode) {
@@ -550,38 +514,8 @@ public class LoginActivity extends AppCompatActivity
     }
 
     @Override
-    public void onConnected(Bundle bundle) {
-        mGoogleApiShouldResolve = false;
-
-        new GetIdTokenTask().execute();
-    }
-
-    @Override
-    public void onConnectionSuspended(int i) {
-        // for Google+, do nothing for now
-    }
-
-    @Override
     public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
-        boolean resolved = false;
-
-        if (!mGoogleApiIsResolving && mGoogleApiShouldResolve) {
-            if (connectionResult.hasResolution()) {
-                try {
-                    connectionResult.startResolutionForResult(this, RC_GOOGLE_API_RESOLVE);
-                    mGoogleApiIsResolving = true;
-                } catch (IntentSender.SendIntentException e) {
-                    mGoogleApiIsResolving = false;
-                    mGoogleApiClient.connect();
-                }
-
-                resolved = true;
-            }
-        }
-
-        if (!resolved) {
-            Toast.makeText(this, R.string.error_google_failed, Toast.LENGTH_LONG).show();
-        }
+        Toast.makeText(this, R.string.error_google_failed, Toast.LENGTH_LONG).show();
     }
 
     @Override
@@ -859,45 +793,6 @@ public class LoginActivity extends AppCompatActivity
                             .andClientCredentials()
             );
         }
-    }
-
-    private class GetIdTokenTask extends AsyncTask<String, Void, String> {
-
-        @Override
-        protected String doInBackground(String... params) {
-            final String accountName = Plus.AccountApi.getAccountName(mGoogleApiClient);
-            final String scopes = "oauth2:" + Plus.SCOPE_PLUS_LOGIN.toString();
-            String idToken = "";
-
-            try {
-                idToken = GoogleAuthUtil.getToken(
-                        getApplicationContext(),
-                        accountName,
-                        scopes);
-            } catch (Exception e) {
-                // ignore
-            }
-
-            return idToken;
-        }
-
-        @Override
-        protected void onPreExecute() {
-            setViewsEnabled(false);
-        }
-
-        @Override
-        protected void onPostExecute(String result) {
-            setViewsEnabled(true);
-
-            if (TextUtils.isEmpty(result)) {
-                Toast.makeText(LoginActivity.this, R.string.error_google_no_token, Toast.LENGTH_LONG).show();
-                return;
-            }
-
-            new TokenGoogleRequest(result).start();
-        }
-
     }
 
     private class TokenGoogleRequest extends TokenRequest {

@@ -7,7 +7,6 @@
     <string name="action_sign_in">Đăng nhập</string>
     <string name="action_sign_in_facebook">Đăng nhập với Facebook</string>
     <string name="action_sign_in_google">Đăng nhập với Google+</string>
-    <string name="action_sign_in_google_get_accounts">Bạn phải cho phép truy cập Danh bạ để tiếp tục với Google+</string>
     <string name="action_sign_in_short">Đăng nhập</string>
     <string name="action_sign_in_twitter">Đăng nhập với Twitter</string>
     <string name="are_you_sure_quit">Bạn có chắc chắn muốn thoát khỏi ứng dụng?</string>
@@ -21,7 +20,6 @@
     <string name="error_facebook_failed">Không thể đăng nhập với Facebook</string>
     <string name="error_field_required">Vui lòng nhập</string>
     <string name="error_google_failed">Không thể đăng nhập với Google+</string>
-    <string name="error_google_no_token">Không tìm thấy tài khoản Google</string>
     <string name="error_invalid_email">Địa chỉ thư điện tử không đúng</string>
     <string name="error_invalid_password">Mật khẩu không đúng</string>
     <string name="error_no_authorization_code">Không tìm thấy mã cho phép</string>
