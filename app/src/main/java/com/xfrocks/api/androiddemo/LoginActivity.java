@@ -92,6 +92,7 @@ public class LoginActivity extends AppCompatActivity
     private Button mGoogleSignIn;
 
     private boolean mViewsEnabled = true;
+    private boolean mSocialVisibilitiesSet = false;
     private ProgressDialog mProgressDialog;
 
     @Override
@@ -214,21 +215,15 @@ public class LoginActivity extends AppCompatActivity
             });
         }
 
-        if (mFacebookSignin != null
-                || mTwitterSignIn != null
-                || mGoogleSignIn != null) {
-            if (savedInstanceState != null
-                    && (savedInstanceState.containsKey(STATE_FACEBOOK_SIGN_IN)
-                    || savedInstanceState.containsKey(STATE_TWITTER_SIGN_IN)
-                    || savedInstanceState.containsKey(STATE_GOOGLE_SIGN_IN))) {
-                setSocialVisibilities(
-                        savedInstanceState.getBoolean(STATE_FACEBOOK_SIGN_IN, false),
-                        savedInstanceState.getBoolean(STATE_TWITTER_SIGN_IN, false),
-                        savedInstanceState.getBoolean(STATE_GOOGLE_SIGN_IN, false)
-                );
-            } else {
-                new ToolsLoginSocialRequest().start();
-            }
+        if (savedInstanceState != null
+                && (savedInstanceState.containsKey(STATE_FACEBOOK_SIGN_IN)
+                || savedInstanceState.containsKey(STATE_TWITTER_SIGN_IN)
+                || savedInstanceState.containsKey(STATE_GOOGLE_SIGN_IN))) {
+            setSocialVisibilities(
+                    savedInstanceState.getBoolean(STATE_FACEBOOK_SIGN_IN, false),
+                    savedInstanceState.getBoolean(STATE_TWITTER_SIGN_IN, false),
+                    savedInstanceState.getBoolean(STATE_GOOGLE_SIGN_IN, false)
+            );
         }
 
         Button mRegister = (Button) findViewById(R.id.register);
@@ -326,7 +321,17 @@ public class LoginActivity extends AppCompatActivity
                         })
                         .show();
             } else {
-                attemptLogin(at);
+                if (attemptLogin(at)) {
+                    return;
+                }
+            }
+        }
+
+        if (mFacebookSignin != null
+                || mTwitterSignIn != null
+                || mGoogleSignIn != null) {
+            if (!mSocialVisibilitiesSet) {
+                new ToolsLoginSocialRequest().start();
             }
         }
 
@@ -506,23 +511,24 @@ public class LoginActivity extends AppCompatActivity
         setIntent(intent);
     }
 
-    private void attemptLogin(Api.AccessToken at) {
+    private boolean attemptLogin(Api.AccessToken at) {
         if (mTokenRequest != null) {
-            return;
+            return false;
         }
 
         if (at.isValid()) {
             startNextActivityAndFinish(at);
-            return;
+            return true;
         }
 
         final String refreshToken = at.getRefreshToken();
         if (TextUtils.isEmpty(refreshToken)) {
             Toast.makeText(this, R.string.error_no_refresh_token, Toast.LENGTH_LONG).show();
-            return;
+            return false;
         }
 
         new RefreshTokenRequest(refreshToken).start();
+        return true;
     }
 
     private void startNextActivityAndFinish(Api.AccessToken at) {
@@ -536,7 +542,7 @@ public class LoginActivity extends AppCompatActivity
         Class[] discussionActivities = new Class[]{
                 ConversationActivity.class,
         };
-        for (Class discussionActivity: discussionActivities) {
+        for (Class discussionActivity : discussionActivities) {
             String discussionActivityRedirectToPrefix = discussionActivity.getSimpleName() + "://";
             if (redirectTo.startsWith(discussionActivityRedirectToPrefix)) {
                 nextIntent = new Intent(LoginActivity.this, ConversationActivity.class);
@@ -623,6 +629,8 @@ public class LoginActivity extends AppCompatActivity
         if (mGoogleSignIn != null) {
             mGoogleSignIn.setVisibility(google ? View.VISIBLE : View.GONE);
         }
+
+        mSocialVisibilitiesSet = true;
     }
 
     private abstract class TokenRequest extends Api.PostRequest {
