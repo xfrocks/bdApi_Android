@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:visibility="gone"
+    tools:visibility="visible">
+
+    <LinearLayout
+        android:id="@+id/extra"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <android.support.v7.widget.RecyclerView
+            android:id="@+id/attachments"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+
+        <ImageButton
+            android:id="@+id/attach"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@color/tw__transparent"
+            android:contentDescription="@string/pick_file_to_attach"
+            android:src="@drawable/ic_attach_24dp" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <EditText
+            android:id="@+id/message"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1.0"
+            android:hint="@string/write_a_reply"
+            android:inputType="textCapSentences"
+            android:textSize="17sp"
+            tools:ignore="LabelFor" />
+
+        <ImageButton
+            android:id="@+id/reply"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@color/tw__transparent"
+            android:contentDescription="@string/post_reply"
+            android:src="@drawable/ic_send_24dp" />
+
+    </LinearLayout>
+
+</LinearLayout>

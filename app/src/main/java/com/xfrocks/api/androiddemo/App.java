@@ -13,6 +13,9 @@ import com.android.volley.toolbox.ImageLoader;
 import com.android.volley.toolbox.Volley;
 import com.xfrocks.api.androiddemo.helper.PubKeyManager;
 
+import net.gotev.uploadservice.Logger;
+import net.gotev.uploadservice.UploadService;
+
 import java.io.File;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
@@ -47,6 +50,11 @@ public class App extends MultiDexApplication {
         }
 
         mRequestQueue = Volley.newRequestQueue(getApplicationContext(), httpStack);
+
+        UploadService.NAMESPACE = BuildConfig.APPLICATION_ID;
+        if (BuildConfig.DEBUG) {
+            Logger.setLogLevel(Logger.LogLevel.DEBUG);
+        }
 
         sInstance = this;
     }

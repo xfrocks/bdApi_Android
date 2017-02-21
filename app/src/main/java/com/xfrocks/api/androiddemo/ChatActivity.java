@@ -8,23 +8,25 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.AppCompatImageView;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
+import android.text.SpannableStringBuilder;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.EditText;
-import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.ImageLoader;
+import com.google.android.gms.vision.text.Line;
 import com.xfrocks.api.androiddemo.gcm.ChatOrNotifReceiver;
 
 import org.json.JSONArray;
@@ -34,10 +36,12 @@ import org.json.JSONObject;
 import java.text.Format;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Iterator;
+import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class ChatActivity extends AppCompatActivity {
+public class ChatActivity extends AppCompatActivity implements QuickReplyFragment.Listener {
 
     public static final String EXTRA_ACCESS_TOKEN = "access_token";
     public static final String EXTRA_USER = "user";
@@ -51,13 +55,11 @@ public class ChatActivity extends AppCompatActivity {
     private LinearLayoutManager mMessagesLayoutManager;
     private RecyclerView mMessages;
 
-    private ViewGroup mFooter;
-    private EditText mMessage;
+    private QuickReplyFragment mQuickReply;
 
     private Api.AccessToken mAccessToken;
     private Api.User mUser;
     private Api.Conversation mConversation;
-    private int mConversationId;
     private int mPages;
     private int mPage;
 
@@ -92,7 +94,7 @@ public class ChatActivity extends AppCompatActivity {
                         && mMessagesLayoutManager.findLastCompletelyVisibleItemPosition() > mAdapter.getItemCount() - 5
                         && mPage < mPages
                         && mMessagesRequest == null) {
-                    new MessagesRequest(mConversationId, mPage + 1, mAccessToken).start();
+                    new MessagesRequest(getConversationId(), mPage + 1, mAccessToken).start();
                 }
             }
         });
@@ -100,22 +102,15 @@ public class ChatActivity extends AppCompatActivity {
         mAdapter = new MessagesAdapter(android.text.format.DateFormat.getTimeFormat(this));
         mMessages.setAdapter(mAdapter);
 
-        mFooter = (ViewGroup) findViewById(R.id.footer);
-        mMessage = (EditText) findViewById(R.id.message);
-        ImageButton mReply = (ImageButton) findViewById(R.id.reply);
-        mReply.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                attemptReply();
-            }
-        });
+        mQuickReply = (QuickReplyFragment) getSupportFragmentManager().findFragmentById(R.id.quickReply);
 
         mBroadcastReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
-                if (mConversationId == 0
+                int conversationId = getConversationId();
+                if (conversationId == 0
                         || !ChatOrNotifReceiver.ACTION.equals(intent.getAction())
-                        || ChatOrNotifReceiver.getConversationId(intent) != mConversationId) {
+                        || ChatOrNotifReceiver.getConversationId(intent) != conversationId) {
                     return;
                 }
 
@@ -129,7 +124,7 @@ public class ChatActivity extends AppCompatActivity {
 
                 // this broadcast is for new message in this conversation
                 // process it now
-                new PatchRequest(mConversationId, mAccessToken).start();
+                new PatchRequest(conversationId, mAccessToken).start();
 
                 abortBroadcast();
             }
@@ -147,6 +142,11 @@ public class ChatActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
 
+        int conversationId = 0;
+        if (mConversation != null) {
+            conversationId = mConversation.getConversationId();
+        }
+
         Intent mainIntent = getIntent();
         if (mainIntent != null) {
             if (mainIntent.hasExtra(EXTRA_ACCESS_TOKEN)) {
@@ -158,11 +158,11 @@ public class ChatActivity extends AppCompatActivity {
             }
 
             if (mainIntent.hasExtra(EXTRA_CONVERSATION_ID)) {
-                mConversationId = mainIntent.getIntExtra(EXTRA_CONVERSATION_ID, 0);
+                conversationId = mainIntent.getIntExtra(EXTRA_CONVERSATION_ID, 0);
             }
         }
 
-        if (mConversationId == 0) {
+        if (conversationId == 0) {
             finish();
             return;
         }
@@ -173,12 +173,12 @@ public class ChatActivity extends AppCompatActivity {
             }
 
             if (mAdapter.getItemCount() == 0) {
-                new MessagesRequest(mConversationId, 1, mAccessToken).start();
+                new MessagesRequest(conversationId, 1, mAccessToken).start();
             }
         } else {
             Intent loginIntent = new Intent(this, LoginActivity.class);
             loginIntent.putExtra(LoginActivity.EXTRA_REDIRECT_TO,
-                    "ChatActivity://" + mConversationId);
+                    "ChatActivity://" + conversationId);
 
             startActivity(loginIntent);
             finish();
@@ -203,7 +203,7 @@ public class ChatActivity extends AppCompatActivity {
             if (intent.hasExtra(EXTRA_CONVERSATION_ID)) {
                 int conversationId = intent.getIntExtra(EXTRA_CONVERSATION_ID, 0);
                 if (conversationId > 0
-                        && conversationId != mConversationId) {
+                        && conversationId != getConversationId()) {
                     new MessagesRequest(conversationId, 1, mAccessToken).start();
                 }
             }
@@ -232,7 +232,7 @@ public class ChatActivity extends AppCompatActivity {
         super.onSaveInstanceState(outState);
 
         outState.putSerializable(STATE_ACCESS_TOKEN, mAccessToken);
-        outState.putInt(STATE_CONVERSATION_ID, mConversationId);
+        outState.putInt(STATE_CONVERSATION_ID, getConversationId());
     }
 
     @Override
@@ -242,7 +242,9 @@ public class ChatActivity extends AppCompatActivity {
         if (savedInstanceState.containsKey(STATE_ACCESS_TOKEN)
                 && savedInstanceState.containsKey(STATE_CONVERSATION_ID)) {
             mAccessToken = (Api.AccessToken) savedInstanceState.getSerializable(STATE_ACCESS_TOKEN);
-            mConversationId = savedInstanceState.getInt(STATE_CONVERSATION_ID);
+
+            int conversationId = savedInstanceState.getInt(STATE_CONVERSATION_ID);
+            mConversation = Api.makeConversation(conversationId);
         }
     }
 
@@ -250,9 +252,10 @@ public class ChatActivity extends AppCompatActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.refresh:
-                if (mConversationId > 0
+                int conversationId = getConversationId();
+                if (conversationId > 0
                         && mAccessToken != null) {
-                    new MessagesRequest(mConversationId, 1, mAccessToken).start();
+                    new MessagesRequest(conversationId, 1, mAccessToken).start();
                 }
                 break;
             case R.id.permalink:
@@ -268,6 +271,11 @@ public class ChatActivity extends AppCompatActivity {
         return true;
     }
 
+    @Override
+    public void onQuickReplySubmit(QuickReplyFragment qr) {
+        new PostMessageRequest(getConversationId(), qr.getPendingMessage(), mAccessToken).start();
+    }
+
     private void setTheProgressBarVisibility(boolean visible) {
         if (mProgressBar != null) {
             mProgressBar.setVisibility(visible ? View.VISIBLE : View.GONE);
@@ -277,22 +285,25 @@ public class ChatActivity extends AppCompatActivity {
     private void setConversation(Api.Conversation conversation) {
         setTitle(conversation.getConversationTitle());
 
-        if (conversation.canReply()) {
-            mFooter.setVisibility(View.VISIBLE);
-        } else {
-            mFooter.setVisibility(View.GONE);
-        }
-
-        mConversationId = conversation.getConversationId();
         mConversation = conversation;
+        mQuickReply.setup(mConversation.canReply(), this);
+        if (mConversation.canUploadAttachment()) {
+            mQuickReply.setupAttach(Api.makeAttachmentsUrl(Api.URL_CONVERSATIONS_ATTACHMENTS, getAttachmentHash(), mAccessToken));
+        } else {
+            mQuickReply.setupAttach(null);
+        }
     }
 
-    private void attemptReply() {
-        String message = mMessage.getText().toString().trim();
-        if (!message.isEmpty()) {
-            mMessage.setText("");
-            new PostMessageRequest(mConversationId, message, mAccessToken).start();
+    private int getConversationId() {
+        if (mConversation == null) {
+            return 0;
         }
+
+        return mConversation.getConversationId();
+    }
+
+    private String getAttachmentHash() {
+        return String.format(Locale.US, "conversation-%d", getConversationId());
     }
 
     private class UsersMeRequest extends Api.GetRequest {
@@ -492,6 +503,7 @@ public class ChatActivity extends AppCompatActivity {
             super(Api.URL_CONVERSATION_MESSAGES, new Api.Params(at)
                     .and(Api.URL_CONVERSATION_MESSAGES_PARAM_CONVERSATION_ID, conversationId)
                     .and(Api.URL_CONVERSATION_MESSAGES_PARAM_MESSAGE_BODY, messageBody)
+                    .and(Api.URL_CONVERSATION_MESSAGES_PARAM_ATTACHMENT_HASH, getAttachmentHash())
                     .and("fields_include", "message_id"));
 
             mFakeMessage = Api.makeMessage(mUser, messageBody);
@@ -511,7 +523,7 @@ public class ChatActivity extends AppCompatActivity {
                 return;
             }
 
-            new PatchRequest(mConversationId, mAccessToken).start();
+            new PatchRequest(getConversationId(), mAccessToken).start();
         }
 
         @Override
@@ -528,8 +540,7 @@ public class ChatActivity extends AppCompatActivity {
                         .show();
 
                 mAdapter.notifyItemRemoved(mAdapter.removeMessage(mFakeMessage));
-                mMessage.setText(mFakeMessage.getMessageBodyPlainText());
-                mMessage.selectAll();
+                mQuickReply.restorePending();
             }
         }
     }
@@ -618,6 +629,37 @@ public class ChatActivity extends AppCompatActivity {
             }
 
             holder.message.setText(message.getMessageBodyPlainText());
+
+            holder.attachments.removeAllViews();
+            boolean hasAttachments = false;
+            Iterator<Api.Attachment> attachmentsIterator = message.getAttachmentsIterator();
+            while (attachmentsIterator.hasNext()) {
+                final Api.Attachment attachment = attachmentsIterator.next();
+                ImageView attachmentImageView = new AppCompatImageView(ChatActivity.this);
+
+                int thumbnailSize = getResources().getDimensionPixelSize(R.dimen.attachment_thumbnail_size);
+                int thumbnailMargin = getResources().getDimensionPixelSize(R.dimen.attachment_thumbnail_margin);
+                LinearLayout.LayoutParams vp = new LinearLayout.LayoutParams(thumbnailSize, thumbnailSize);
+                vp.setMargins(thumbnailMargin, thumbnailMargin, thumbnailMargin, thumbnailMargin);
+                attachmentImageView.setLayoutParams(vp);
+                attachmentImageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                App.getInstance().getNetworkImageLoader().get(
+                        attachment.getThumbnail(),
+                        ImageLoader.getImageListener(attachmentImageView, R.drawable.avatar_l, 0)
+                );
+
+                attachmentImageView.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(attachment.getPermalink()));
+                        startActivity(browserIntent);
+                    }
+                });
+
+                holder.attachments.addView(attachmentImageView);
+                hasAttachments = true;
+            }
+            holder.attachments.setVisibility(hasAttachments ? View.VISIBLE : View.GONE);
         }
 
         @Override
@@ -659,6 +701,7 @@ public class ChatActivity extends AppCompatActivity {
     private static class ViewHolder extends RecyclerView.ViewHolder {
         private final ImageView avatar;
         private final TextView message;
+        private final LinearLayout attachments;
         private final TextView info;
 
         public ViewHolder(View v) {
@@ -666,6 +709,7 @@ public class ChatActivity extends AppCompatActivity {
 
             avatar = (ImageView) v.findViewById(R.id.avatar);
             message = (TextView) v.findViewById(R.id.message);
+            attachments = (LinearLayout) v.findViewById(R.id.attachments);
             info = (TextView) v.findViewById(R.id.info);
         }
     }

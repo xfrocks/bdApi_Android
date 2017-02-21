@@ -6,6 +6,7 @@ import android.util.Log;
 import com.android.volley.AuthFailureError;
 import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.NetworkResponse;
+import com.android.volley.Request;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.HttpHeaderParser;
@@ -37,7 +38,10 @@ import java.util.Map;
 
 public class Api {
 
-    private static final String PARAM_LOCALE = "locale";
+    public static final String PARAM_LOCALE = "locale";
+    public static final String PARAM_OAUTH_TOKEN = "oauth_token";
+    public static final String PARAM_ATTACHMENT_HASH = "attachment_hash";
+    public static final String PARAM_FILE = "file";
 
     public static final String URL_OAUTH_TOKEN = "oauth/token";
     public static final String URL_OAUTH_TOKEN_FACEBOOK = "oauth/token/facebook";
@@ -50,6 +54,7 @@ public class Api {
     public static final String URL_USERS_ME_AVATAR = "users/me/avatar";
     public static final String URL_TOOLS_LOGIN_SOCIAL = "tools/login/social";
     public static final String URL_CONVERSATION_MESSAGES = "conversation-messages";
+    public static final String URL_CONVERSATIONS_ATTACHMENTS = "conversations/attachments";
 
     public static final String URL_OAUTH_TOKEN_PARAM_GRANT_TYPE = "grant_type";
     public static final String URL_OAUTH_TOKEN_PARAM_GRANT_TYPE_PASSWORD = "password";
@@ -86,6 +91,7 @@ public class Api {
     public static final String URL_CONVERSATION_MESSAGES_PARAM_ORDER = "order";
     public static final String URL_CONVERSATION_MESSAGES_ORDER_REVERSE = "natural_reverse";
     public static final String URL_CONVERSATION_MESSAGES_PARAM_MESSAGE_BODY = "message_body";
+    public static final String URL_CONVERSATION_MESSAGES_PARAM_ATTACHMENT_HASH = "attachment_hash";
 
     public static AccessToken makeAccessToken(JSONObject response) {
         try {
@@ -175,6 +181,16 @@ public class Api {
                 }
             }
 
+            if (obj.has("attachments")) {
+                JSONArray attachments = obj.getJSONArray("attachments");
+                for (int i = 0, l = attachments.length(); i < l; i++) {
+                    JSONObject attachmentObj = attachments.getJSONObject(i);
+                    Attachment attachment = makeAttachment(attachmentObj);
+
+                    m.attachments.add(attachment);
+                }
+            }
+
             return m;
         } catch (JSONException e) {
             // ignore
@@ -219,6 +235,35 @@ public class Api {
         }
 
         return null;
+    }
+
+    public static Conversation makeConversation(int conversationId) {
+        Conversation c = new Conversation();
+        c.conversationId = conversationId;
+
+        return c;
+    }
+
+    public static Attachment makeAttachment(JSONObject obj) {
+        try {
+            Attachment a = new Attachment();
+
+            a.attachmentId = obj.getInt("attachment_id");
+            a.fileName = obj.getString("filename");
+
+            if (obj.has("links")) {
+                JSONObject links = obj.getJSONObject("links");
+                a.permalink = links.getString("permalink");
+
+                if (links.has("thumbnail")) {
+                    a.thumbnail = links.getString("thumbnail");
+                }
+            }
+
+            return a;
+        } catch (JSONException e) {
+            return null;
+        }
     }
 
     public static String makeOneTimeToken(long userId, AccessToken at) {
@@ -295,6 +340,11 @@ public class Api {
         return null;
     }
 
+    public static String makeAttachmentsUrl(String path, String attachmentHash, AccessToken accessToken) {
+        return makeUrl(com.android.volley.Request.Method.GET, path, new Params(accessToken)
+                .and(PARAM_ATTACHMENT_HASH, attachmentHash));
+    }
+
     private static String makeUrl(int method, String url, Map<String, String> params) {
         if (!url.contains("://")) {
             url = String.format("%s/index.php?%s", BuildConfig.API_ROOT, url.replace('?', '&'));
@@ -324,8 +374,8 @@ public class Api {
         }
 
         if (url.contains("&oauth_token=")
-                && params.containsKey("oauth_token")) {
-            params.remove("oauth_token");
+                && params.containsKey(PARAM_OAUTH_TOKEN)) {
+            params.remove(PARAM_OAUTH_TOKEN);
         }
 
         return url;
@@ -406,6 +456,10 @@ public class Api {
         public void deliverError(VolleyError error) {
             if (BuildConfig.DEBUG) {
                 Log.v(getTag().toString(), "Error=" + error);
+
+                if (error.networkResponse != null) {
+                    Log.v(getTag().toString(), "Error.NetworkResponse=" + new String(error.networkResponse.data));
+                }
             }
 
             onError(error);
@@ -593,7 +647,7 @@ public class Api {
             try {
                 mBuiltBody.writeTo(bos);
             } catch (IOException e) {
-                Log.e(getTag().toString(), e.toString());
+                Log.e(getTag().toString(), "getBody: " + e.toString());
             }
 
             return bos.toByteArray();
@@ -640,13 +694,13 @@ public class Api {
             super(1);
 
             if (at != null) {
-                put("oauth_token", at.getToken());
+                put(PARAM_OAUTH_TOKEN, at.getToken());
             }
         }
 
         public Params(String token) {
             super(1);
-            put("oauth_token", token);
+            put(PARAM_OAUTH_TOKEN, token);
         }
 
         public Params and(String key, Object value) {
@@ -809,6 +863,8 @@ public class Api {
         private Integer messageCreateDate;
         private String messageBodyPlainText;
 
+        private List<Attachment> attachments = new ArrayList<>();
+
         public Integer getCreatorId() {
             return creatorUserId;
         }
@@ -833,6 +889,34 @@ public class Api {
             return messageBodyPlainText;
         }
 
+        public Iterator<Attachment> getAttachmentsIterator() {
+            return attachments.iterator();
+        }
+    }
+
+    public static class Attachment implements Serializable {
+
+        private Integer attachmentId;
+        private String fileName;
+
+        private String permalink;
+        private String thumbnail;
+
+        public Integer getAttachmentId() {
+            return attachmentId;
+        }
+
+        public String getFileName() {
+            return fileName;
+        }
+
+        public String getPermalink() {
+            return permalink;
+        }
+
+        public String getThumbnail() {
+            return thumbnail;
+        }
     }
 
 }

@@ -16,6 +16,9 @@
     <string name="refresh">Refresh</string>
     <string name="open_in_browser">Open in Browser</string>
     <string name="write_a_reply">Write a reply</string>
+    <string name="pick_file_to_attach">Pick a file to upload as attachment</string>
+    <string name="attachment_thumbnail">Thumbnail</string>
+    <string name="attachment_uploaded">Uploaded</string>
     <string name="post_reply">Post reply</string>
     <string name="now">Now</string>
 

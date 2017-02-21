@@ -12,6 +12,8 @@
     <string name="action_sign_in_twitter">Đăng nhập với Twitter</string>
     <string name="are_you_sure_quit">Bạn có chắc chắn muốn thoát khỏi ứng dụng?</string>
     <string name="action_associate">Kết nối tài khoản</string>
+    <string name="attachment_thumbnail">Hình xem trước</string>
+    <string name="attachment_uploaded">Đã tải lên</string>
     <string name="avatar">Hình đại diện</string>
     <string name="avatar_pick_image">Chụp hình hoặc chọn ảnh để làm hình đại diện</string>
     <string name="error_facebook_cancelled">Đăng nhập với Facebook đã bị hủy giữa chừng</string>
@@ -31,6 +33,7 @@
     <string name="navigation_drawer_open">Mở khung địa chỉ</string>
     <string name="now">Vừa mới</string>
     <string name="open_in_browser">Mở trong Trình duyệt</string>
+    <string name="pick_file_to_attach">Chọn tập tin để đính kèm</string>
     <string name="post_pick_file">Chọn tập tin để tải lên</string>
     <string name="post_prompt">Chọn nội dung để đăng</string>
     <string name="post_reply">Đăng trả lời</string>
