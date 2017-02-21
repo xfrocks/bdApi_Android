@@ -11,7 +11,7 @@ import com.android.volley.NetworkResponse;
 import com.android.volley.Response;
 import com.android.volley.toolbox.HttpHeaderParser;
 import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.GooglePlayServicesUtil;
+import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.gcm.GoogleCloudMessaging;
 import com.google.android.gms.iid.InstanceID;
 import com.xfrocks.api.androiddemo.Api;
@@ -20,6 +20,8 @@ import com.xfrocks.api.androiddemo.BuildConfig;
 import com.xfrocks.api.androiddemo.R;
 
 import org.json.JSONObject;
+
+import java.util.Locale;
 
 public class RegistrationService extends IntentService {
 
@@ -42,11 +44,11 @@ public class RegistrationService extends IntentService {
         canRun = !TextUtils.isEmpty(BuildConfig.PUSH_SERVER);
 
         // check for Google Play Services
-        int resultCode = GooglePlayServicesUtil.isGooglePlayServicesAvailable(context);
+        GoogleApiAvailability gaa = GoogleApiAvailability.getInstance();
+        int resultCode = gaa.isGooglePlayServicesAvailable(context);
         canRun = canRun && (resultCode == ConnectionResult.SUCCESS);
 
         return canRun;
-
     }
 
     @Override
@@ -102,7 +104,7 @@ public class RegistrationService extends IntentService {
         private final long mUserId;
 
         RegisterRequest(String gcmToken, long userId, Api.AccessToken at) {
-            super(gcmToken, userId > 0 ? String.format("user_notification_%d", userId) : "", at);
+            super(gcmToken, userId > 0 ? String.format(Locale.US, "user_notification_%d", userId) : "", at);
 
             mUserId = userId;
         }

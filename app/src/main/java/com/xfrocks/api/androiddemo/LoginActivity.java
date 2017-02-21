@@ -562,7 +562,7 @@ public class LoginActivity extends AppCompatActivity
     }
 
     @Override
-    public void onConnectionFailed(ConnectionResult connectionResult) {
+    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
         boolean resolved = false;
 
         if (!mGoogleApiIsResolving && mGoogleApiShouldResolve) {

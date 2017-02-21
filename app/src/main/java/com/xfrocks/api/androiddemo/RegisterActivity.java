@@ -22,6 +22,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.Calendar;
+import java.util.Locale;
 
 public class RegisterActivity extends AppCompatActivity
         implements TfaDialogFragment.TfaDialogListener {
@@ -121,7 +122,7 @@ public class RegisterActivity extends AppCompatActivity
                                     : assocUser.getEmail())
                             .setTag(assocUser.getUserId()));
                 }
-                mTabLayout.setOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+                mTabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
                     @Override
                     public void onTabSelected(TabLayout.Tab tab) {
                         if (tab.getTag() instanceof Integer) {
@@ -206,7 +207,7 @@ public class RegisterActivity extends AppCompatActivity
                 focusView = mPasswordView;
                 cancel = true;
             }
-        } else if (!isPasswordValid(password)) {
+        } else if (isPasswordInvalid(password)) {
             mPasswordView.setError(getString(R.string.error_invalid_password));
             focusView = mPasswordView;
             cancel = true;
@@ -216,7 +217,7 @@ public class RegisterActivity extends AppCompatActivity
             mEmailView.setError(getString(R.string.error_field_required));
             focusView = mEmailView;
             cancel = true;
-        } else if (!isEmailValid(email)) {
+        } else if (isEmailInvalid(email)) {
             mEmailView.setError(getString(R.string.error_invalid_email));
             focusView = mEmailView;
             cancel = true;
@@ -254,7 +255,7 @@ public class RegisterActivity extends AppCompatActivity
             mPasswordView.setError(getString(R.string.error_field_required));
             focusView = mPasswordView;
             cancel = true;
-        } else if (!isPasswordValid(password)) {
+        } else if (isPasswordInvalid(password)) {
             mPasswordView.setError(getString(R.string.error_invalid_password));
             focusView = mPasswordView;
             cancel = true;
@@ -267,12 +268,12 @@ public class RegisterActivity extends AppCompatActivity
         }
     }
 
-    private boolean isEmailValid(String email) {
-        return email.contains("@");
+    private boolean isEmailInvalid(String email) {
+        return !email.contains("@");
     }
 
-    private boolean isPasswordValid(String password) {
-        return password.length() > 4;
+    private boolean isPasswordInvalid(String password) {
+        return password.length() <= 4;
     }
 
     private void setRegisterOrAssociate(int userId) {
@@ -352,7 +353,7 @@ public class RegisterActivity extends AppCompatActivity
         mDobMonth = month;
         mDobDay = day;
 
-        mDobView.setText(String.format("%04d-%02d-%02d", year, month, day));
+        mDobView.setText(String.format(Locale.US, "%04d-%02d-%02d", year, month, day));
     }
 
     private class RegisterRequest extends Api.PostRequest {
@@ -395,10 +396,11 @@ public class RegisterActivity extends AppCompatActivity
             }
 
             String errorMessage = getErrorMessage(response);
-            if (errorMessage != null) {
-                Toast.makeText(RegisterActivity.this, errorMessage, Toast.LENGTH_LONG).show();
+            if (TextUtils.isEmpty(errorMessage)) {
                 return;
             }
+
+            Toast.makeText(RegisterActivity.this, errorMessage, Toast.LENGTH_LONG).show();
         }
 
         @Override
@@ -453,10 +455,11 @@ public class RegisterActivity extends AppCompatActivity
             }
 
             String errorMessage = getErrorMessage(response);
-            if (errorMessage != null) {
-                Toast.makeText(RegisterActivity.this, errorMessage, Toast.LENGTH_LONG).show();
+            if (TextUtils.isEmpty(errorMessage)) {
                 return;
             }
+
+            Toast.makeText(RegisterActivity.this, errorMessage, Toast.LENGTH_LONG).show();
         }
 
         @Override

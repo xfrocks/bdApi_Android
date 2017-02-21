@@ -6,7 +6,6 @@ import android.util.Log;
 import com.android.volley.AuthFailureError;
 import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.NetworkResponse;
-import com.android.volley.Request;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.HttpHeaderParser;
@@ -276,7 +275,7 @@ public class Api {
             return e.getMessage();
         }
 
-        md.update(String.format("%d%d%s%s",
+        md.update(String.format(Locale.US, "%d%d%s%s",
                 userId,
                 timestamp,
                 at != null ? at.getToken() : "",
@@ -293,7 +292,7 @@ public class Api {
             sb.append(h);
         }
 
-        return String.format("%d,%d,%s,%s", userId, timestamp, sb, BuildConfig.CLIENT_ID);
+        return String.format(Locale.US, "%d,%d,%s,%s", userId, timestamp, sb, BuildConfig.CLIENT_ID);
     }
 
     public static String makeAuthorizeRedirectUri(String redirectTo) {
@@ -863,7 +862,7 @@ public class Api {
         private Integer messageCreateDate;
         private String messageBodyPlainText;
 
-        private List<Attachment> attachments = new ArrayList<>();
+        private final List<Attachment> attachments = new ArrayList<>();
 
         public Integer getCreatorId() {
             return creatorUserId;

@@ -17,8 +17,6 @@ import net.gotev.uploadservice.Logger;
 import net.gotev.uploadservice.UploadService;
 
 import java.io.File;
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;

@@ -9,7 +9,7 @@ import javax.net.ssl.X509TrustManager;
 
 public final class PubKeyManager implements X509TrustManager {
 
-    private String publicKey;
+    private final String publicKey;
 
     public PubKeyManager(String publicKey) {
         this.publicKey = publicKey;

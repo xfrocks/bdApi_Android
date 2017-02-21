@@ -12,7 +12,6 @@ import android.support.v7.widget.AppCompatImageView;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
-import android.text.SpannableStringBuilder;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -26,7 +25,6 @@ import android.widget.TextView;
 
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.ImageLoader;
-import com.google.android.gms.vision.text.Line;
 import com.xfrocks.api.androiddemo.gcm.ChatOrNotifReceiver;
 
 import org.json.JSONArray;
@@ -643,6 +641,9 @@ public class ChatActivity extends AppCompatActivity implements QuickReplyFragmen
                 vp.setMargins(thumbnailMargin, thumbnailMargin, thumbnailMargin, thumbnailMargin);
                 attachmentImageView.setLayoutParams(vp);
                 attachmentImageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
+
+                attachmentImageView.setContentDescription(getString(R.string.attachment_id_x_name_y,
+                        attachment.getAttachmentId(), attachment.getFileName()));
                 App.getInstance().getNetworkImageLoader().get(
                         attachment.getThumbnail(),
                         ImageLoader.getImageListener(attachmentImageView, R.drawable.avatar_l, 0)

@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="gcm_register_success">Registered for GCM successfully</string>
     <string name="gcm_subscribe_x_success">Subscribed for %1$s\'s notifications</string>
     <string name="gcm_unregister_success">GCM has been unregistered</string>
@@ -13,12 +13,14 @@
     <string name="post_success">New content has been posted successfully</string>
     <string name="post_pick_file">Pick a file to upload</string>
 
-    <string name="refresh">Refresh</string>
-    <string name="open_in_browser">Open in Browser</string>
-    <string name="write_a_reply">Write a reply</string>
     <string name="pick_file_to_attach">Pick a file to upload as attachment</string>
     <string name="attachment_thumbnail">Thumbnail</string>
     <string name="attachment_uploaded">Uploaded</string>
+    <string name="attachment_id_x_name_y" tools:ignore="PluralsCandidate">Attachment #%1$d with file name: "%2$s"</string>
+
+    <string name="refresh">Refresh</string>
+    <string name="open_in_browser">Open in Browser</string>
+    <string name="write_a_reply">Write a reply</string>
     <string name="post_reply">Post reply</string>
     <string name="now">Now</string>
 

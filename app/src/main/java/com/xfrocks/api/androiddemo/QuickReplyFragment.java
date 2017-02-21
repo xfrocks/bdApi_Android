@@ -246,7 +246,7 @@ public class QuickReplyFragment extends Fragment {
     }
 
     private class AttachmentsAdapter extends RecyclerView.Adapter<AttachmentViewHolder> {
-        private ArrayList<Attachment> mAttachments = new ArrayList<>();
+        private final ArrayList<Attachment> mAttachments = new ArrayList<>();
 
         @Override
         public AttachmentViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {

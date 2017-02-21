@@ -12,6 +12,7 @@
     <string name="action_sign_in_twitter">Đăng nhập với Twitter</string>
     <string name="are_you_sure_quit">Bạn có chắc chắn muốn thoát khỏi ứng dụng?</string>
     <string name="action_associate">Kết nối tài khoản</string>
+    <string name="attachment_id_x_name_y">File đính kèm #%1$d với định danh: "%2$s"</string>
     <string name="attachment_thumbnail">Hình xem trước</string>
     <string name="attachment_uploaded">Đã tải lên</string>
     <string name="avatar">Hình đại diện</string>
