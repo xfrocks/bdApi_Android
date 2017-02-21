@@ -2,17 +2,17 @@ apply plugin: 'com.android.application'
 
 android {
 
-    buildTypes {
-        debug {
-            buildConfigField "String", "API_ROOT", "\"http://domain.com/xenforo/api\""
-            buildConfigField "String", "CLIENT_ID", "\"client_id\""
-            buildConfigField "String", "CLIENT_SECRET", "\"client_secret\""
-            buildConfigField "String", "AUTHORIZE_REDIRECT_URI", "\"androiddemo://domain.com/callback\""
-            buildConfigField "String", "PUBLIC_KEY", "\"\""
-            buildConfigField "String", "PUSH_SERVER", "\"http://push.server.com\""
-            buildConfigField "String", "TWITTER_CONSUMER_KEY", "\"\""
-            buildConfigField "String", "TWITTER_CONSUMER_SECRET", "\"\""
-        }
+    defaultConfig {
+        buildConfigField "String", "API_ROOT", "\"http://domain.com/xenforo/api\""
+        buildConfigField "String", "CLIENT_ID", "\"client_id\""
+        buildConfigField "String", "CLIENT_SECRET", "\"client_secret\""
+        buildConfigField "String", "AUTHORIZE_REDIRECT_URI", "\"androiddemo://domain.com/callback\""
+        buildConfigField "String", "PUBLIC_KEY", "\"\""
+        buildConfigField "String", "PUSH_SERVER", "\"http://push.server.com\""
+        buildConfigField "String", "TWITTER_CONSUMER_KEY", "\"\""
+        buildConfigField "String", "TWITTER_CONSUMER_SECRET", "\"\""
+
+        buildConfigField "int", "FEATURE_CONFIRM_SIGN_IN_WITH_REMEMBER", "1"
     }
 
 }

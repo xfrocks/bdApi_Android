@@ -97,4 +97,7 @@ public class App extends MultiDexApplication {
         return Uri.fromFile(new File(context.getExternalCacheDir(), "camera.jpg"));
     }
 
+    public static boolean getFeatureConfirmSignInWithRemember() {
+        return BuildConfig.FEATURE_CONFIRM_SIGN_IN_WITH_REMEMBER > 0;
+    }
 }

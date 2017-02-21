@@ -97,6 +97,7 @@ public class Api {
             AccessToken at = new AccessToken();
             at.token = response.getString("access_token");
             at.userId = response.getLong("user_id");
+            at.expireDate = new Date().getTime() + response.getLong("expires_in") * 1000;
 
             if (response.has("refresh_token")) {
                 at.refreshToken = response.getString("refresh_token");
@@ -748,6 +749,7 @@ public class Api {
         private String token;
         private String refreshToken;
         private long userId;
+        private long expireDate;
 
         public String getToken() {
             return token;
@@ -761,6 +763,9 @@ public class Api {
             return userId;
         }
 
+        public boolean isValid() {
+            return expireDate > new Date().getTime();
+        }
     }
 
     public static class User implements Serializable {

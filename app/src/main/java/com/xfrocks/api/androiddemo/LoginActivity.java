@@ -307,22 +307,26 @@ public class LoginActivity extends AppCompatActivity
         if (at != null) {
             mRememberView.setChecked(true);
 
-            new AlertDialog.Builder(this)
-                    .setMessage(R.string.sign_in_with_remember)
-                    .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialogInterface, int i) {
-                            attemptLogin(at);
-                        }
-                    })
-                    .setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialogInterface, int i) {
-                            mRememberView.setChecked(false);
-                            AccessTokenHelper.save(LoginActivity.this, null);
-                        }
-                    })
-                    .show();
+            if (App.getFeatureConfirmSignInWithRemember()) {
+                new AlertDialog.Builder(this)
+                        .setMessage(R.string.sign_in_with_remember)
+                        .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int i) {
+                                attemptLogin(at);
+                            }
+                        })
+                        .setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int i) {
+                                mRememberView.setChecked(false);
+                                AccessTokenHelper.save(LoginActivity.this, null);
+                            }
+                        })
+                        .show();
+            } else {
+                attemptLogin(at);
+            }
         }
 
         if (mGcmReceiver != null) {
@@ -506,11 +510,57 @@ public class LoginActivity extends AppCompatActivity
             return;
         }
 
-        if (TextUtils.isEmpty(at.getRefreshToken())) {
-            Toast.makeText(this, R.string.error_no_refresh_token, Toast.LENGTH_LONG).show();
-        } else {
-            new RefreshTokenRequest(at.getRefreshToken()).start();
+        if (at.isValid()) {
+            startNextActivityAndFinish(at);
+            return;
         }
+
+        final String refreshToken = at.getRefreshToken();
+        if (TextUtils.isEmpty(refreshToken)) {
+            Toast.makeText(this, R.string.error_no_refresh_token, Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        new RefreshTokenRequest(refreshToken).start();
+    }
+
+    private void startNextActivityAndFinish(Api.AccessToken at) {
+        Intent nextIntent = null;
+        Intent loginIntent = getIntent();
+        String redirectTo = "";
+        if (loginIntent != null && loginIntent.hasExtra(EXTRA_REDIRECT_TO)) {
+            redirectTo = loginIntent.getStringExtra(EXTRA_REDIRECT_TO);
+        }
+
+        final String chatActivityPrefix = "ChatActivity://";
+        if (redirectTo.startsWith(chatActivityPrefix)) {
+            try {
+                int conversationId = Integer.parseInt(redirectTo.substring(chatActivityPrefix.length()));
+                nextIntent = new Intent(LoginActivity.this, ChatActivity.class);
+                nextIntent.putExtra(ChatActivity.EXTRA_ACCESS_TOKEN, at);
+                nextIntent.putExtra(ChatActivity.EXTRA_CONVERSATION_ID, conversationId);
+            } catch (NumberFormatException nfe) {
+                // ignore
+            }
+        }
+
+        if (nextIntent == null) {
+            nextIntent = new Intent(LoginActivity.this, MainActivity.class);
+            nextIntent.putExtra(MainActivity.EXTRA_ACCESS_TOKEN, at);
+            if (!redirectTo.isEmpty()) {
+                nextIntent.putExtra(MainActivity.EXTRA_URL, redirectTo);
+            }
+        }
+
+        startActivity(nextIntent);
+
+        if (RegistrationService.canRun(LoginActivity.this)) {
+            Intent gcmIntent = new Intent(LoginActivity.this, RegistrationService.class);
+            gcmIntent.putExtra(RegistrationService.EXTRA_ACCESS_TOKEN, at);
+            startService(gcmIntent);
+        }
+
+        finish();
     }
 
     @Override
@@ -631,42 +681,7 @@ public class LoginActivity extends AppCompatActivity
                 AccessTokenHelper.save(LoginActivity.this, at);
             }
 
-            Intent nextIntent = null;
-            Intent loginIntent = getIntent();
-            String redirectTo = "";
-            if (loginIntent != null && loginIntent.hasExtra(EXTRA_REDIRECT_TO)) {
-                redirectTo = loginIntent.getStringExtra(EXTRA_REDIRECT_TO);
-            }
-
-            final String chatActivityPrefix = "ChatActivity://";
-            if (redirectTo.startsWith(chatActivityPrefix)) {
-                try {
-                    int conversationId = Integer.parseInt(redirectTo.substring(chatActivityPrefix.length()));
-                    nextIntent = new Intent(LoginActivity.this, ChatActivity.class);
-                    nextIntent.putExtra(ChatActivity.EXTRA_ACCESS_TOKEN, at);
-                    nextIntent.putExtra(ChatActivity.EXTRA_CONVERSATION_ID, conversationId);
-                } catch (NumberFormatException nfe) {
-                    // ignore
-                }
-            }
-
-            if (nextIntent == null) {
-                nextIntent = new Intent(LoginActivity.this, MainActivity.class);
-                nextIntent.putExtra(MainActivity.EXTRA_ACCESS_TOKEN, at);
-                if (!redirectTo.isEmpty()) {
-                    nextIntent.putExtra(MainActivity.EXTRA_URL, redirectTo);
-                }
-            }
-
-            startActivity(nextIntent);
-
-            if (RegistrationService.canRun(LoginActivity.this)) {
-                Intent gcmIntent = new Intent(LoginActivity.this, RegistrationService.class);
-                gcmIntent.putExtra(RegistrationService.EXTRA_ACCESS_TOKEN, at);
-                startService(gcmIntent);
-            }
-
-            finish();
+            startNextActivityAndFinish(at);
         }
 
         @Override
