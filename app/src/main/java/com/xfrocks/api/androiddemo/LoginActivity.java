@@ -44,6 +44,7 @@ import com.twitter.sdk.android.core.TwitterAuthConfig;
 import com.twitter.sdk.android.core.TwitterException;
 import com.twitter.sdk.android.core.TwitterSession;
 import com.twitter.sdk.android.core.identity.TwitterAuthClient;
+import com.xfrocks.api.androiddemo.discussion.ConversationActivity;
 import com.xfrocks.api.androiddemo.gcm.RegistrationService;
 import com.xfrocks.api.androiddemo.persist.AccessTokenHelper;
 
@@ -532,15 +533,15 @@ public class LoginActivity extends AppCompatActivity
             redirectTo = loginIntent.getStringExtra(EXTRA_REDIRECT_TO);
         }
 
-        final String chatActivityPrefix = "ChatActivity://";
-        if (redirectTo.startsWith(chatActivityPrefix)) {
-            try {
-                int conversationId = Integer.parseInt(redirectTo.substring(chatActivityPrefix.length()));
-                nextIntent = new Intent(LoginActivity.this, ChatActivity.class);
-                nextIntent.putExtra(ChatActivity.EXTRA_ACCESS_TOKEN, at);
-                nextIntent.putExtra(ChatActivity.EXTRA_CONVERSATION_ID, conversationId);
-            } catch (NumberFormatException nfe) {
-                // ignore
+        Class[] discussionActivities = new Class[]{
+                ConversationActivity.class,
+        };
+        for (Class discussionActivity: discussionActivities) {
+            String discussionActivityRedirectToPrefix = discussionActivity.getSimpleName() + "://";
+            if (redirectTo.startsWith(discussionActivityRedirectToPrefix)) {
+                nextIntent = new Intent(LoginActivity.this, ConversationActivity.class);
+                nextIntent.putExtra(ConversationActivity.EXTRA_ACCESS_TOKEN, at);
+                nextIntent.putExtra(ConversationActivity.EXTRA_LOGIN_REDIRECTED_TO, redirectTo);
             }
         }
 
@@ -634,7 +635,7 @@ public class LoginActivity extends AppCompatActivity
         }
 
         @Override
-        void onStart() {
+        protected void onStart() {
             mTokenRequest = this;
             setViewsEnabled(false);
             AccessTokenHelper.save(LoginActivity.this, null);

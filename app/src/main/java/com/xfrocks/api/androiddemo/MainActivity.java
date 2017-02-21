@@ -328,7 +328,7 @@ public class MainActivity extends AppCompatActivity
         }
 
         @Override
-        void onStart() {
+        protected void onStart() {
             mPost.setVisibility(View.GONE);
             mPostLinks.clear();
         }
@@ -424,7 +424,7 @@ public class MainActivity extends AppCompatActivity
         }
 
         @Override
-        void onError(VolleyError error) {
+        protected void onError(VolleyError error) {
             String message = getErrorMessage(error);
 
             if (message != null) {
@@ -433,7 +433,7 @@ public class MainActivity extends AppCompatActivity
         }
 
         @Override
-        void onComplete() {
+        protected void onComplete() {
             new UsersMeRequest(mAccessToken).start();
         }
     }

@@ -131,12 +131,6 @@ public class QuickReplyFragment extends Fragment {
         return mPendingMessage;
     }
 
-    public void restorePending() {
-        mMessage.setText(mPendingMessage);
-        mMessage.selectAll();
-        mPendingMessage = null;
-    }
-
     private void toggleExtraPanel() {
         boolean canAttach = false;
         int visible = 0;
@@ -238,11 +232,11 @@ public class QuickReplyFragment extends Fragment {
         if (mListener == null) {
             return;
         }
-        mListener.onQuickReplySubmit(this);
+        mListener.onQuickReplySubmit();
     }
 
     public interface Listener {
-        void onQuickReplySubmit(QuickReplyFragment qr);
+        void onQuickReplySubmit();
     }
 
     private class AttachmentsAdapter extends RecyclerView.Adapter<AttachmentViewHolder> {

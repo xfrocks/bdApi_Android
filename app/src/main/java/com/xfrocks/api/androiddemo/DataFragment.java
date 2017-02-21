@@ -18,6 +18,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.android.volley.VolleyError;
+import com.xfrocks.api.androiddemo.discussion.ConversationActivity;
+import com.xfrocks.api.androiddemo.discussion.ThreadActivity;
 import com.xfrocks.api.androiddemo.persist.Row;
 
 import org.json.JSONObject;
@@ -120,13 +122,25 @@ public class DataFragment extends ListFragment {
                     intent = new Intent(Intent.ACTION_VIEW, Uri.parse(row.value));
                 }
 
-                if (intent == null) {
-                    int conversationId = ChatActivity.getConversationIdFromUrl(row.value);
-                    if (conversationId > 0) {
-                        intent = new Intent(getContext(), ChatActivity.class);
-                        intent.putExtra(ChatActivity.EXTRA_ACCESS_TOKEN, ma.getAccessToken());
-                        intent.putExtra(ChatActivity.EXTRA_USER, ma.getUser());
-                        intent.putExtra(ChatActivity.EXTRA_CONVERSATION_ID, conversationId);
+                if ("detail".equals(row.key)) {
+                    if (intent == null) {
+                        int threadId = ThreadActivity.getThreadIdFromUrl(row.value);
+                        if (threadId > 0) {
+                            intent = new Intent(getContext(), ThreadActivity.class);
+                            intent.putExtra(ConversationActivity.EXTRA_ACCESS_TOKEN, ma.getAccessToken());
+                            intent.putExtra(ConversationActivity.EXTRA_USER, ma.getUser());
+                            intent.putExtra(ConversationActivity.EXTRA_DISCUSSION_ID, threadId);
+                        }
+                    }
+
+                    if (intent == null) {
+                        int conversationId = ConversationActivity.getConversationIdFromUrl(row.value);
+                        if (conversationId > 0) {
+                            intent = new Intent(getContext(), ConversationActivity.class);
+                            intent.putExtra(ConversationActivity.EXTRA_ACCESS_TOKEN, ma.getAccessToken());
+                            intent.putExtra(ConversationActivity.EXTRA_USER, ma.getUser());
+                            intent.putExtra(ConversationActivity.EXTRA_DISCUSSION_ID, conversationId);
+                        }
                     }
                 }
 

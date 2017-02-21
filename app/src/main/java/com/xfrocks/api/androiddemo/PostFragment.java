@@ -306,7 +306,7 @@ public class PostFragment extends ListFragment {
         }
 
         @Override
-        void onError(VolleyError error) {
+        protected void onError(VolleyError error) {
             String message = getErrorMessage(error);
 
             if (message != null) {

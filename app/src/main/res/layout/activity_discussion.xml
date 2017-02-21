@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:keepScreenOn="true"
-    tools:context=".ChatActivity">
+    tools:context=".discussion.DiscussionActivity">
 
     <android.support.design.widget.AppBarLayout
         android:id="@+id/header"
@@ -41,7 +41,7 @@
         tools:layout="@layout/fragment_quick_reply" />
 
     <android.support.v7.widget.RecyclerView
-        android:id="@+id/messages"
+        android:id="@+id/messageList"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_above="@id/quickReply"

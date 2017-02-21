@@ -41,6 +41,8 @@ public class Api {
     public static final String PARAM_OAUTH_TOKEN = "oauth_token";
     public static final String PARAM_ATTACHMENT_HASH = "attachment_hash";
     public static final String PARAM_FILE = "file";
+    public static final String PARAM_PAGE = "page";
+    public static final String PARAM_ORDER = "order";
 
     public static final String URL_OAUTH_TOKEN = "oauth/token";
     public static final String URL_OAUTH_TOKEN_FACEBOOK = "oauth/token/facebook";
@@ -54,6 +56,8 @@ public class Api {
     public static final String URL_TOOLS_LOGIN_SOCIAL = "tools/login/social";
     public static final String URL_CONVERSATION_MESSAGES = "conversation-messages";
     public static final String URL_CONVERSATIONS_ATTACHMENTS = "conversations/attachments";
+    public static final String URL_POSTS = "posts";
+    public static final String URL_POSTS_ATTACHMENTS = "posts/attachments";
 
     public static final String URL_OAUTH_TOKEN_PARAM_GRANT_TYPE = "grant_type";
     public static final String URL_OAUTH_TOKEN_PARAM_GRANT_TYPE_PASSWORD = "password";
@@ -86,11 +90,14 @@ public class Api {
     public static final String URL_USERS_ME_AVATAR_PARAM_AVATAR = "avatar";
 
     public static final String URL_CONVERSATION_MESSAGES_PARAM_CONVERSATION_ID = "conversation_id";
-    public static final String URL_CONVERSATION_MESSAGES_PARAM_PAGE = "page";
-    public static final String URL_CONVERSATION_MESSAGES_PARAM_ORDER = "order";
     public static final String URL_CONVERSATION_MESSAGES_ORDER_REVERSE = "natural_reverse";
     public static final String URL_CONVERSATION_MESSAGES_PARAM_MESSAGE_BODY = "message_body";
     public static final String URL_CONVERSATION_MESSAGES_PARAM_ATTACHMENT_HASH = "attachment_hash";
+
+    public static final String URL_POSTS_PARAM_THREAD_ID = "thread_id";
+    public static final String URL_POSTS_ORDER_REVERSE = "natural_reverse";
+    public static final String URL_POSTS_PARAM_POST_BODY = "post_body";
+    public static final String URL_POSTS_PARAM_ATTACHMENT_HASH = "attachment_hash";
 
     public static AccessToken makeAccessToken(JSONObject response) {
         try {
@@ -164,15 +171,22 @@ public class Api {
         return null;
     }
 
-    public static Message makeMessage(JSONObject obj) {
+    public static PlaceholderDiscussion makePlaceholderDiscussion(int discussionId) {
+        PlaceholderDiscussion d = new PlaceholderDiscussion();
+        d.id = discussionId;
+
+        return d;
+    }
+
+    public static ConversationMessage makeConversationMessage(JSONObject obj) {
         try {
-            Message m = new Message();
+            ConversationMessage m = new ConversationMessage();
 
             m.creatorUserId = obj.getInt("creator_user_id");
             m.creatorName = obj.getString("creator_username");
-            m.messageId = obj.getInt("message_id");
-            m.messageCreateDate = obj.getInt("message_create_date");
-            m.messageBodyPlainText = obj.getString("message_body_plain_text");
+            m.id = obj.getInt("message_id");
+            m.createDate = obj.getInt("message_create_date");
+            m.bodyPlainText = obj.getString("message_body_plain_text");
 
             if (obj.has("links")) {
                 JSONObject links = obj.getJSONObject("links");
@@ -199,14 +213,14 @@ public class Api {
         return null;
     }
 
-    public static Message makeMessage(Api.User user, String messageBodyPlainText) {
-        Message m = new Message();
+    public static ConversationMessage makeConversationMessage(Api.User user, String bodyPlainText) {
+        ConversationMessage m = new ConversationMessage();
 
         m.creatorUserId = user.getUserId();
         m.creatorName = user.getUsername();
         m.creatorAvatar = user.getAvatar();
-        m.messageBodyPlainText = messageBodyPlainText;
-        m.messageCreateDate = (int) new Date().getTime() / 1000;
+        m.bodyPlainText = bodyPlainText;
+        m.createDate = (int) new Date().getTime() / 1000;
 
         return m;
     }
@@ -215,8 +229,8 @@ public class Api {
         try {
             Conversation c = new Conversation();
 
-            c.conversationId = obj.getInt("conversation_id");
-            c.conversationTitle = obj.getString("conversation_title");
+            c.id = obj.getInt("conversation_id");
+            c.title = obj.getString("conversation_title");
 
             if (obj.has("links")) {
                 JSONObject links = obj.getJSONObject("links");
@@ -225,8 +239,8 @@ public class Api {
 
             if (obj.has("permissions")) {
                 JSONObject permissions = obj.getJSONObject("permissions");
-                c.canReply = permissions.getBoolean("reply");
-                c.canUploadAttachment = permissions.getBoolean("upload_attachment");
+                c.permissionPostMessage = permissions.getBoolean("reply");
+                c.permissionUploadAttachment = permissions.getBoolean("upload_attachment");
             }
 
             return c;
@@ -237,11 +251,77 @@ public class Api {
         return null;
     }
 
-    public static Conversation makeConversation(int conversationId) {
-        Conversation c = new Conversation();
-        c.conversationId = conversationId;
+    public static Post makePost(JSONObject obj) {
+        try {
+            Post p = new Post();
 
-        return c;
+            p.creatorUserId = obj.getInt("poster_user_id");
+            p.creatorName = obj.getString("poster_username");
+            p.id = obj.getInt("post_id");
+            p.createDate = obj.getInt("post_create_date");
+            p.bodyPlainText = obj.getString("post_body_plain_text");
+
+            if (obj.has("links")) {
+                JSONObject links = obj.getJSONObject("links");
+                if (links.has("poster_avatar")) {
+                    p.creatorAvatar = links.getString("poster_avatar");
+                }
+            }
+
+            if (obj.has("attachments")) {
+                JSONArray attachments = obj.getJSONArray("attachments");
+                for (int i = 0, l = attachments.length(); i < l; i++) {
+                    JSONObject attachmentObj = attachments.getJSONObject(i);
+                    Attachment attachment = makeAttachment(attachmentObj);
+
+                    p.attachments.add(attachment);
+                }
+            }
+
+            return p;
+        } catch (JSONException e) {
+            // ignore
+        }
+
+        return null;
+    }
+
+    public static Post makePost(Api.User user, String bodyPlainText) {
+        Post p = new Post();
+
+        p.creatorUserId = user.getUserId();
+        p.creatorName = user.getUsername();
+        p.creatorAvatar = user.getAvatar();
+        p.bodyPlainText = bodyPlainText;
+        p.createDate = (int) new Date().getTime() / 1000;
+
+        return p;
+    }
+
+    public static Thread makeThread(JSONObject obj) {
+        try {
+            Thread t = new Thread();
+
+            t.id = obj.getInt("thread_id");
+            t.title = obj.getString("thread_title");
+
+            if (obj.has("links")) {
+                JSONObject links = obj.getJSONObject("links");
+                t.permalink = links.getString("permalink");
+            }
+
+            if (obj.has("permissions")) {
+                JSONObject permissions = obj.getJSONObject("permissions");
+                t.permissionPostMessage = permissions.getBoolean("post");
+                t.permissionUploadAttachment = permissions.getBoolean("upload_attachment");
+            }
+
+            return t;
+        } catch (JSONException e) {
+            // ignore
+        }
+
+        return null;
     }
 
     public static Attachment makeAttachment(JSONObject obj) {
@@ -466,7 +546,7 @@ public class Api {
             onComplete();
         }
 
-        void onStart() {
+        protected void onStart() {
             // do something?
         }
 
@@ -474,15 +554,15 @@ public class Api {
             // do something?
         }
 
-        void onError(VolleyError error) {
+        protected void onError(VolleyError error) {
             // do something?
         }
 
-        void onComplete() {
+        protected void onComplete() {
             // do something?
         }
 
-        String getErrorMessage(VolleyError error) {
+        protected String getErrorMessage(VolleyError error) {
             String message = null;
 
             if (error.getCause() != null) {
@@ -508,7 +588,7 @@ public class Api {
             return message;
         }
 
-        String getErrorMessage(JSONObject response) {
+        protected String getErrorMessage(JSONObject response) {
             String message = null;
 
             try {
@@ -536,7 +616,7 @@ public class Api {
             return message;
         }
 
-        void parseRows(JSONObject obj, List<Row> rows) {
+        protected void parseRows(JSONObject obj, List<Row> rows) {
             Iterator<String> keys = obj.keys();
             while (keys.hasNext()) {
                 final Row row = new Row();
@@ -551,7 +631,7 @@ public class Api {
             }
         }
 
-        void parseRows(JSONArray array, List<Row> rows) {
+        protected void parseRows(JSONArray array, List<Row> rows) {
             for (int i = 0; i < array.length(); i++) {
                 final Row row = new Row();
                 row.key = String.valueOf(i);
@@ -565,7 +645,7 @@ public class Api {
             }
         }
 
-        void parseRow(Object value, Row row) {
+        protected void parseRow(Object value, Row row) {
             if (value instanceof JSONObject) {
                 row.value = "(object)";
                 row.subRows = new ArrayList<>();
@@ -825,51 +905,51 @@ public class Api {
 
     }
 
-    public static class Conversation implements Serializable {
+    abstract public static class Discussion implements Serializable {
 
-        private Integer conversationId;
-        private String conversationTitle;
+        Integer id;
+        String title;
 
-        private String permalink;
+        String permalink;
 
-        private boolean canReply;
-        private boolean canUploadAttachment;
+        boolean permissionPostMessage;
+        boolean permissionUploadAttachment;
 
-        public Integer getConversationId() {
-            return conversationId;
+        public Integer getId() {
+            return id;
         }
 
-        public String getConversationTitle() {
-            return conversationTitle;
+        public String getTitle() {
+            return title;
         }
 
         public String getPermalink() {
             return permalink;
         }
 
-        public boolean canReply() {
-            return canReply;
+        public boolean canPostMessage() {
+            return permissionPostMessage;
         }
 
         public boolean canUploadAttachment() {
-            return canUploadAttachment;
+            return permissionUploadAttachment;
         }
 
     }
 
-    public static class Message implements Serializable {
+    public static class DiscussionMessage implements Serializable {
 
-        private Integer creatorUserId;
-        private String creatorName;
-        private String creatorAvatar;
+        Integer creatorUserId;
+        String creatorName;
+        String creatorAvatar;
 
-        private Integer messageId;
-        private Integer messageCreateDate;
-        private String messageBodyPlainText;
+        Integer id;
+        Integer createDate;
+        String bodyPlainText;
 
-        private final List<Attachment> attachments = new ArrayList<>();
+        final List<Attachment> attachments = new ArrayList<>();
 
-        public Integer getCreatorId() {
+        public Integer getCreatorUserId() {
             return creatorUserId;
         }
 
@@ -881,21 +961,37 @@ public class Api {
             return creatorAvatar;
         }
 
-        public Integer getMessageId() {
-            return messageId;
+        public Integer getId() {
+            return id;
         }
 
-        public Integer getMessageCreateDate() {
-            return messageCreateDate;
+        public Integer getCreateDate() {
+            return createDate;
         }
 
-        public String getMessageBodyPlainText() {
-            return messageBodyPlainText;
+        public String getBodyPlainText() {
+            return bodyPlainText;
         }
 
         public Iterator<Attachment> getAttachmentsIterator() {
             return attachments.iterator();
         }
+    }
+
+    public static class PlaceholderDiscussion extends Discussion {
+
+    }
+
+    public static class Conversation extends Discussion {
+    }
+
+    public static class ConversationMessage extends DiscussionMessage {
+    }
+
+    public static class Thread extends Discussion {
+    }
+
+    public static class Post extends DiscussionMessage {
     }
 
     public static class Attachment implements Serializable {

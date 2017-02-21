@@ -11,7 +11,7 @@ import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 
 import com.xfrocks.api.androiddemo.BuildConfig;
-import com.xfrocks.api.androiddemo.ChatActivity;
+import com.xfrocks.api.androiddemo.discussion.ConversationActivity;
 
 public class ChatOrNotifReceiver extends BroadcastReceiver {
 
@@ -46,8 +46,8 @@ public class ChatOrNotifReceiver extends BroadcastReceiver {
     }
 
     private static void showNotification(Context context, Intent chatOrNotifIntent) {
-        Intent activityIntent = new Intent(context, ChatActivity.class);
-        activityIntent.putExtra(ChatActivity.EXTRA_CONVERSATION_ID,
+        Intent activityIntent = new Intent(context, ConversationActivity.class);
+        activityIntent.putExtra(ConversationActivity.EXTRA_DISCUSSION_ID,
                 chatOrNotifIntent.getIntExtra(EXTRA_CONVERSATION_ID, 0));
         PendingIntent pendingIntent = PendingIntent.getActivity(context,
                 0, activityIntent, PendingIntent.FLAG_ONE_SHOT);

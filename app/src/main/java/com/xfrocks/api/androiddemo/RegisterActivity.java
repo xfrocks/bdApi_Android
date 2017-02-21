@@ -373,7 +373,7 @@ public class RegisterActivity extends AppCompatActivity
         }
 
         @Override
-        void onStart() {
+        protected void onStart() {
             mRegisterRequest = this;
             setViewsEnabled(false);
         }
@@ -404,7 +404,7 @@ public class RegisterActivity extends AppCompatActivity
         }
 
         @Override
-        void onComplete() {
+        protected void onComplete() {
             mRegisterRequest = null;
             setViewsEnabled(true);
         }
@@ -426,7 +426,7 @@ public class RegisterActivity extends AppCompatActivity
         }
 
         @Override
-        void onStart() {
+        protected void onStart() {
             mRegisterRequest = this;
             setViewsEnabled(false);
         }
@@ -463,7 +463,7 @@ public class RegisterActivity extends AppCompatActivity
         }
 
         @Override
-        void onComplete() {
+        protected void onComplete() {
             mRegisterRequest = null;
             setViewsEnabled(true);
         }
