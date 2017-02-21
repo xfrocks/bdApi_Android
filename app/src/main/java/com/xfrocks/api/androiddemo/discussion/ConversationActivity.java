@@ -149,7 +149,7 @@ public class ConversationActivity extends DiscussionActivity {
                     .and(Api.URL_CONVERSATION_MESSAGES_PARAM_CONVERSATION_ID, getDiscussionId())
                     .and(Api.PARAM_PAGE, page)
                     .and(Api.PARAM_ORDER, Api.URL_CONVERSATION_MESSAGES_ORDER_REVERSE)
-                    .andIf(page > 1, "fields_exclude", "conversation"));
+                    .andIf(page > 1, "fields_exclude", "conversation"), page);
         }
     }
 

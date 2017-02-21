@@ -97,7 +97,7 @@ public class ThreadActivity extends DiscussionActivity {
                     .and(Api.URL_POSTS_PARAM_THREAD_ID, getDiscussionId())
                     .and(Api.PARAM_PAGE, page)
                     .and(Api.PARAM_ORDER, Api.URL_POSTS_ORDER_REVERSE)
-                    .andIf(page > 1, "fields_exclude", "thread"));
+                    .andIf(page > 1, "fields_exclude", "thread"), page);
         }
     }
 

@@ -323,17 +323,10 @@ abstract public class DiscussionActivity extends AppCompatActivity implements Qu
 
         final int mRequestPage;
 
-        public MessagesRequest(String url, Api.Params params) {
+        public MessagesRequest(String url, Api.Params params, int page) {
             super(url, params);
 
-            int paramPageInt = 1;
-            try {
-                String paramPage = params.get(Api.PARAM_PAGE);
-                paramPageInt = Integer.valueOf(paramPage);
-            } catch (NumberFormatException e) {
-                // ignore
-            }
-            mRequestPage = paramPageInt;
+            mRequestPage = page;
         }
 
         @Override
