@@ -22,6 +22,13 @@ public class ChooserIntent {
         pickIntent.setType(type);
         pickIntent.setAction(Intent.ACTION_GET_CONTENT);
 
+        Intent chooserIntent = Intent.createChooser(pickIntent, title);
+        chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, buildCameraIntents(context));
+
+        return chooserIntent;
+    }
+
+    public static Intent[] buildCameraIntents(Context context) {
         List<Intent> cameraIntents = new ArrayList<>();
         Intent captureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
 
@@ -35,11 +42,7 @@ public class ChooserIntent {
             cameraIntents.add(intent);
         }
 
-        Intent chooserIntent = Intent.createChooser(pickIntent, title);
-        chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS,
-                cameraIntents.toArray(new Intent[cameraIntents.size()]));
-
-        return chooserIntent;
+        return cameraIntents.toArray(new Intent[cameraIntents.size()]);
     }
 
     public static Intent create(Context context, int titleResId, String type) {

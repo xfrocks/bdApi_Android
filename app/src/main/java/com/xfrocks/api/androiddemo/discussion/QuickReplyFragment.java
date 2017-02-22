@@ -40,6 +40,7 @@ public class QuickReplyFragment extends Fragment {
 
     LinearLayout mExtra;
     ImageButton mAttach;
+    ImageButton mCamera;
     EditText mMessage;
     ImageButton mReply;
 
@@ -77,12 +78,26 @@ public class QuickReplyFragment extends Fragment {
             }
         });
 
+        mCamera = (ImageButton) view.findViewById(R.id.camera);
+        mCamera.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                attemptCamera();
+            }
+        });
+
         mMessage = (EditText) view.findViewById(R.id.message);
         mMessage.setOnEditorActionListener(new TextView.OnEditorActionListener() {
             @Override
             public boolean onEditorAction(TextView textView, int i, KeyEvent keyEvent) {
                 attemptReply();
                 return true;
+            }
+        });
+        mMessage.setOnFocusChangeListener(new View.OnFocusChangeListener() {
+            @Override
+            public void onFocusChange(View view, boolean b) {
+                toggleExtraPanel();
             }
         });
 
@@ -161,14 +176,23 @@ public class QuickReplyFragment extends Fragment {
         boolean canAttach = false;
         int visible = 0;
 
+        if (mMessage.hasFocus()) {
+            visible++;
+        }
+
         if (mDiscussion != null && mDiscussion.canUploadAttachment()) {
             canAttach = true;
         }
         if (canAttach) {
             mAttach.setVisibility(View.VISIBLE);
-            visible++;
+            mCamera.setVisibility(View.VISIBLE);
+
+            if (mPendingAttachments.getItemCount() > 0) {
+                visible++;
+            }
         } else {
             mAttach.setVisibility(View.GONE);
+            mCamera.setVisibility(View.GONE);
         }
 
         mExtra.setVisibility(visible > 0 ? View.VISIBLE : View.GONE);
@@ -177,6 +201,16 @@ public class QuickReplyFragment extends Fragment {
     void attemptAttach() {
         Intent chooserIntent = ChooserIntent.create(getContext(), R.string.pick_file_to_attach, "*/*");
         startActivityForResult(chooserIntent, RC_PICK_FILE);
+    }
+
+    void attemptCamera() {
+        Intent[] cameraIntents = ChooserIntent.buildCameraIntents(getContext());
+        if (cameraIntents.length == 0) {
+            // TODO: device without camera?
+            return;
+        }
+
+        startActivityForResult(cameraIntents[0], RC_PICK_FILE);
     }
 
     void uploadAttach(Uri uri) {
