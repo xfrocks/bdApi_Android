@@ -1,7 +1,6 @@
 package com.xfrocks.api.androiddemo;
 
 import android.content.Context;
-import android.graphics.Bitmap;
 import android.net.Uri;
 import android.support.multidex.MultiDexApplication;
 import android.text.TextUtils;
@@ -9,7 +8,6 @@ import android.text.TextUtils;
 import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.HttpStack;
 import com.android.volley.toolbox.HurlStack;
-import com.android.volley.toolbox.ImageLoader;
 import com.android.volley.toolbox.Volley;
 import com.xfrocks.api.androiddemo.helper.PubKeyManager;
 
@@ -27,7 +25,6 @@ public class App extends MultiDexApplication {
     private static App sInstance;
 
     private RequestQueue mRequestQueue;
-    private ImageLoader mNetworkImageLoader;
 
     @Override
     public void onCreate() {
@@ -61,34 +58,6 @@ public class App extends MultiDexApplication {
         return mRequestQueue;
     }
 
-    public ImageLoader getNetworkImageLoader() {
-        if (mNetworkImageLoader == null) {
-            // create a network image loader with a super simple image cache
-            // which only keep cached data of one bitmap for one url at a time
-            mNetworkImageLoader = new ImageLoader(getRequestQueue(), new ImageLoader.ImageCache() {
-                String mUrl;
-                Bitmap mBitmap;
-
-                @Override
-                public Bitmap getBitmap(String url) {
-                    if (url.equals(mUrl)) {
-                        return mBitmap;
-                    }
-
-                    return null;
-                }
-
-                @Override
-                public void putBitmap(String url, Bitmap bitmap) {
-                    mUrl = url;
-                    mBitmap = bitmap;
-                }
-            });
-        }
-
-        return mNetworkImageLoader;
-    }
-
     public synchronized static App getInstance() {
         return sInstance;
     }
@@ -99,5 +68,9 @@ public class App extends MultiDexApplication {
 
     public static boolean getFeatureConfirmSignInWithRemember() {
         return BuildConfig.FEATURE_CONFIRM_SIGN_IN_WITH_REMEMBER > 0;
+    }
+
+    public static int getFeatureAttachmentResize() {
+        return BuildConfig.FEATURE_ATTACHMENT_RESIZE;
     }
 }

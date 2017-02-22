@@ -15,3 +15,6 @@
 #-keepclassmembers class fqcn.of.javascript.interface.for.webview {
 #   public *;
 #}
+
+# https://github.com/bumptech/glide/wiki/Integration-Libraries#generic-proguard
+-keep public class * implements com.bumptech.glide.module.GlideModule

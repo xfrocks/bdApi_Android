@@ -23,9 +23,8 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.android.volley.VolleyError;
-import com.android.volley.toolbox.ImageLoader;
+import com.bumptech.glide.Glide;
 import com.xfrocks.api.androiddemo.Api;
-import com.xfrocks.api.androiddemo.App;
 import com.xfrocks.api.androiddemo.LoginActivity;
 import com.xfrocks.api.androiddemo.R;
 import com.xfrocks.api.androiddemo.persist.ObjectAsFile;
@@ -544,10 +543,10 @@ abstract public class DiscussionActivity extends AppCompatActivity implements Qu
                         || !message.getCreatorUserId().equals(messageNext.getCreatorUserId())) {
                     holder.avatar.setVisibility(View.VISIBLE);
                     holder.avatar.setContentDescription(message.getCreatorName());
-                    App.getInstance().getNetworkImageLoader().get(
-                            message.getCreatorAvatar(),
-                            ImageLoader.getImageListener(holder.avatar, R.drawable.avatar_l, 0)
-                    );
+                    Glide.with(DiscussionActivity.this)
+                            .load(message.getCreatorAvatar())
+                            .placeholder(R.drawable.avatar_l)
+                            .into(holder.avatar);
                 } else {
                     holder.avatar.setVisibility(View.GONE);
                 }
@@ -596,10 +595,10 @@ abstract public class DiscussionActivity extends AppCompatActivity implements Qu
 
                 attachmentImageView.setContentDescription(getString(R.string.attachment_id_x_name_y,
                         attachment.getAttachmentId(), attachment.getFileName()));
-                App.getInstance().getNetworkImageLoader().get(
-                        attachment.getThumbnail(),
-                        ImageLoader.getImageListener(attachmentImageView, R.drawable.avatar_l, 0)
-                );
+                Glide.with(DiscussionActivity.this)
+                        .load(attachment.getThumbnail())
+                        .placeholder(R.drawable.avatar_l)
+                        .into(attachmentImageView);
 
                 attachmentImageView.setOnClickListener(new View.OnClickListener() {
                     @Override

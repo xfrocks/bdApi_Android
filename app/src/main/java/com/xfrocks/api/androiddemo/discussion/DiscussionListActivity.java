@@ -18,9 +18,8 @@ import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
-import com.android.volley.toolbox.ImageLoader;
+import com.bumptech.glide.Glide;
 import com.xfrocks.api.androiddemo.Api;
-import com.xfrocks.api.androiddemo.App;
 import com.xfrocks.api.androiddemo.LoginActivity;
 import com.xfrocks.api.androiddemo.R;
 
@@ -301,10 +300,10 @@ abstract public class DiscussionListActivity extends AppCompatActivity {
             Api.Discussion discussion = mData.get(position);
 
             holder.avatar.setContentDescription(discussion.getCreatorName());
-            App.getInstance().getNetworkImageLoader().get(
-                    discussion.getCreatorAvatar(),
-                    ImageLoader.getImageListener(holder.avatar, R.drawable.avatar_l, 0)
-            );
+            Glide.with(DiscussionListActivity.this)
+                    .load(discussion.getCreatorAvatar())
+                    .placeholder(R.drawable.avatar_l)
+                    .into(holder.avatar);
 
             holder.title.setText(discussion.getTitle());
 

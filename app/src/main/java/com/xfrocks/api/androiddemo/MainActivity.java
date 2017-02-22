@@ -26,7 +26,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.android.volley.VolleyError;
-import com.android.volley.toolbox.ImageLoader;
+import com.bumptech.glide.Glide;
 import com.xfrocks.api.androiddemo.helper.ChooserIntent;
 import com.xfrocks.api.androiddemo.persist.ObjectAsFile;
 import com.xfrocks.api.androiddemo.persist.Row;
@@ -286,10 +286,10 @@ public class MainActivity extends AppCompatActivity
         mUser = u;
 
         if (mUser != null) {
-            App.getInstance().getNetworkImageLoader().get(
-                    mUser.getAvatar(),
-                    ImageLoader.getImageListener(mHeaderImg, R.drawable.avatar_l, 0)
-            );
+            Glide.with(this)
+                    .load(mUser.getAvatar())
+                    .placeholder(R.drawable.avatar_l)
+                    .into(mHeaderImg);
             mHeaderTxt.setText(mUser.getUsername());
         } else {
             mHeaderImg.setImageDrawable(null);

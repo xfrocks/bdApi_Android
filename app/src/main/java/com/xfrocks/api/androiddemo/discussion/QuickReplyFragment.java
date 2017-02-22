@@ -3,6 +3,7 @@ package com.xfrocks.api.androiddemo.discussion;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
@@ -10,6 +11,7 @@ import android.support.v4.app.Fragment;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.text.InputType;
+import android.text.TextUtils;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -20,7 +22,11 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.request.animation.GlideAnimation;
+import com.bumptech.glide.request.target.SimpleTarget;
 import com.xfrocks.api.androiddemo.Api;
+import com.xfrocks.api.androiddemo.App;
 import com.xfrocks.api.androiddemo.R;
 import com.xfrocks.api.androiddemo.helper.ChooserIntent;
 
@@ -30,7 +36,10 @@ import net.gotev.uploadservice.UploadInfo;
 import net.gotev.uploadservice.UploadNotificationConfig;
 import net.gotev.uploadservice.UploadStatusDelegate;
 
+import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
 
@@ -213,22 +222,86 @@ public class QuickReplyFragment extends Fragment {
         startActivityForResult(cameraIntents[0], RC_PICK_FILE);
     }
 
-    void uploadAttach(Uri uri) {
+    void attemptResize(final Uri uri, int size) {
+        Glide.with(getActivity().getApplicationContext())
+                .load(uri)
+                .asBitmap()
+                .override(size, size)
+                .fitCenter()
+                .into(new SimpleTarget<Bitmap>() {
+                    @Override
+                    public void onResourceReady(Bitmap resource, GlideAnimation<? super Bitmap> glideAnimation) {
+                        onImageResized(uri, resource);
+                    }
+                });
+    }
+
+    void onImageResized(Uri uri, Bitmap resource) {
+        String fileName = ChooserIntent.getFileNameFromUri(getContext(), uri);
+        String prefix = fileName;
+        String suffix = null;
+        int indexOfDot = fileName.lastIndexOf(".");
+        if (indexOfDot > -1) {
+            prefix = fileName.substring(0, indexOfDot);
+            suffix = fileName.substring(indexOfDot + 1).toLowerCase();
+        }
+        Bitmap.CompressFormat format = Bitmap.CompressFormat.JPEG;
+        if ("png".equals(suffix)) {
+            format = Bitmap.CompressFormat.PNG;
+        } else if ("webp".equals(suffix)) {
+            format = Bitmap.CompressFormat.WEBP;
+        } else {
+            suffix = "jpg";
+        }
+
+        File outputDir = getContext().getCacheDir();
+        File outputFile;
         try {
-            Api.AccessToken accessToken = null;
-            if (mListener != null) {
-                accessToken = mListener.getEffectiveAccessToken();
-            }
-            String serverUrl = mDiscussion.getPostAttachmentsUrl(getAttachmentHash(), accessToken);
+            outputFile = File.createTempFile(prefix, "." + suffix, outputDir);
+            FileOutputStream out = new FileOutputStream(outputFile);
+            resource.compress(format, 70, out);
+            out.flush();
+            out.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+            return;
+        }
 
-            String path = uri.toString();
-            if (path.startsWith("file:///")) {
-                path = path.substring(7);
-            }
+        uploadAttach(uri, outputFile.getPath(), fileName);
+    }
 
+    void uploadAttach(Uri uri) {
+        int size = App.getFeatureAttachmentResize();
+        if (size > 0) {
+            attemptResize(uri, size);
+        } else {
+            uploadAttach(uri, uri.getPath(), null);
+        }
+    }
+
+    void uploadAttach(Uri uri, String path, String fileName) {
+        Api.AccessToken accessToken = null;
+        if (mListener != null) {
+            accessToken = mListener.getEffectiveAccessToken();
+        }
+        if (accessToken == null) {
+            return;
+        }
+
+        String serverUrl = mDiscussion.getPostAttachmentsUrl(getAttachmentHash(), accessToken);
+        if (TextUtils.isEmpty(serverUrl)) {
+            return;
+        }
+
+        if (path.startsWith("file:///")) {
+            path = path.substring(7);
+        }
+
+        try {
             String uploadId = new MultipartUploadRequest(getContext(), serverUrl)
-                    .addFileToUpload(path, Api.PARAM_FILE)
+                    .addFileToUpload(path, Api.PARAM_FILE, fileName)
                     .setUtf8Charset()
+                    .setAutoDeleteFilesAfterSuccessfulUpload(true)
                     .setMaxRetries(2)
                     .setDelegate(new UploadStatusDelegate() {
                         @Override

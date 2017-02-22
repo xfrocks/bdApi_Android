@@ -14,6 +14,7 @@ android {
 
         buildConfigField "int", "FEATURE_CONFIRM_SIGN_IN_WITH_REMEMBER", "1"
         buildConfigField "String", "FEATURE_DEFAULT_URL", "\"\""
+        buildConfigField "int", "FEATURE_ATTACHMENT_RESIZE", "2048"
     }
 
 }
