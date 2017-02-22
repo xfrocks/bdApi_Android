@@ -14,4 +14,10 @@
     <dimen name="message_padding_body">4dp</dimen>
 
     <dimen name="quick_reply_message_height">40dp</dimen>
+
+    <dimen name="discussion_avatar_size">40dp</dimen>
+    <dimen name="discussion_info_text_size">12sp</dimen>
+    <dimen name="discussion_margin_left">48dp</dimen>
+    <dimen name="discussion_padding_top">8dp</dimen>
+    <dimen name="discussion_padding_title">4dp</dimen>
 </resources>

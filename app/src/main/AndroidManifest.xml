@@ -101,6 +101,11 @@
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
         <activity
+            android:name=".discussion.ForumActivity"
+            android:label="@string/app_name"
+            android:launchMode="singleTop" />
+
+        <activity
             android:name=".discussion.ThreadActivity"
             android:label="@string/app_name"
             android:launchMode="singleTop" />

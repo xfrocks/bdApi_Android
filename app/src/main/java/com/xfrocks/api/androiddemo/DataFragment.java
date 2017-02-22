@@ -20,6 +20,8 @@ import android.widget.Toast;
 
 import com.android.volley.VolleyError;
 import com.xfrocks.api.androiddemo.discussion.ConversationActivity;
+import com.xfrocks.api.androiddemo.discussion.DiscussionActivity;
+import com.xfrocks.api.androiddemo.discussion.ForumActivity;
 import com.xfrocks.api.androiddemo.discussion.ThreadActivity;
 import com.xfrocks.api.androiddemo.persist.Row;
 
@@ -130,9 +132,18 @@ public class DataFragment extends ListFragment {
                         int threadId = ThreadActivity.getThreadIdFromUrl(row.value);
                         if (threadId > 0) {
                             intent = new Intent(getContext(), ThreadActivity.class);
-                            intent.putExtra(ConversationActivity.EXTRA_ACCESS_TOKEN, ma.getAccessToken());
-                            intent.putExtra(ConversationActivity.EXTRA_USER, ma.getUser());
-                            intent.putExtra(ConversationActivity.EXTRA_DISCUSSION_ID, threadId);
+                            intent.putExtra(ThreadActivity.EXTRA_ACCESS_TOKEN, ma.getAccessToken());
+                            intent.putExtra(ThreadActivity.EXTRA_USER, ma.getUser());
+                            intent.putExtra(ThreadActivity.EXTRA_DISCUSSION_ID, threadId);
+                        }
+                    }
+
+                    if (intent == null) {
+                        int forumId = ForumActivity.getForumIdFromUrl(row.value);
+                        if (forumId > 0) {
+                            intent = new Intent(getContext(), ForumActivity.class);
+                            intent.putExtra(DiscussionActivity.EXTRA_ACCESS_TOKEN, ma.getAccessToken());
+                            intent.putExtra(ForumActivity.EXTRA_DISCUSSION_CONTAINER_ID, forumId);
                         }
                     }
 

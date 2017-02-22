@@ -58,6 +58,7 @@ public class Api {
     public static final String URL_CONVERSATIONS_ATTACHMENTS = "conversations/attachments";
     public static final String URL_POSTS = "posts";
     public static final String URL_POSTS_ATTACHMENTS = "posts/attachments";
+    public static final String URL_THREADS = "threads";
 
     public static final String URL_OAUTH_TOKEN_PARAM_GRANT_TYPE = "grant_type";
     public static final String URL_OAUTH_TOKEN_PARAM_GRANT_TYPE_PASSWORD = "password";
@@ -98,6 +99,8 @@ public class Api {
     public static final String URL_POSTS_ORDER_REVERSE = "natural_reverse";
     public static final String URL_POSTS_PARAM_POST_BODY = "post_body";
     public static final String URL_POSTS_PARAM_ATTACHMENT_HASH = "attachment_hash";
+
+    public static final String URL_THREADS_PARAM_FORUM_ID = "forum_id";
 
     public static AccessToken makeAccessToken(JSONObject response) {
         try {
@@ -305,9 +308,20 @@ public class Api {
             t.id = obj.getInt("thread_id");
             t.title = obj.getString("thread_title");
 
+            t.creatorName = obj.getString("creator_username");
+            t.createDate = obj.getInt("thread_create_date");
+
+            if (obj.has("first_post")) {
+                t.firstMessage = makePost(obj.getJSONObject("first_post"));
+            }
+
             if (obj.has("links")) {
                 JSONObject links = obj.getJSONObject("links");
                 t.permalink = links.getString("permalink");
+
+                if (links.has("first_poster_avatar")) {
+                    t.creatorAvatar = links.getString("first_poster_avatar");
+                }
             }
 
             if (obj.has("permissions")) {
@@ -921,6 +935,12 @@ public class Api {
         Integer id;
         String title;
 
+        String creatorName;
+        String creatorAvatar;
+        Integer createDate;
+
+        DiscussionMessage firstMessage;
+
         String permalink;
 
         boolean permissionPostMessage;
@@ -932,6 +952,22 @@ public class Api {
 
         public String getTitle() {
             return title;
+        }
+
+        public String getCreatorName() {
+            return creatorName;
+        }
+
+        public String getCreatorAvatar() {
+            return creatorAvatar;
+        }
+
+        public Integer getCreateDate() {
+            return createDate;
+        }
+
+        public DiscussionMessage getFirstMessage() {
+            return firstMessage;
         }
 
         public String getPermalink() {
