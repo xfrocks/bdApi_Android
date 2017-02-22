@@ -47,6 +47,7 @@ import com.twitter.sdk.android.core.identity.TwitterAuthClient;
 import com.xfrocks.api.androiddemo.discussion.ActionSendReceiver;
 import com.xfrocks.api.androiddemo.discussion.ConversationActivity;
 import com.xfrocks.api.androiddemo.discussion.DiscussionActivity;
+import com.xfrocks.api.androiddemo.discussion.ForumActivity;
 import com.xfrocks.api.androiddemo.discussion.ThreadActivity;
 import com.xfrocks.api.androiddemo.gcm.RegistrationService;
 import com.xfrocks.api.androiddemo.persist.ObjectAsFile;
@@ -537,7 +538,7 @@ public class LoginActivity extends AppCompatActivity
     private void startNextActivityAndFinish(Api.AccessToken at) {
         Intent nextIntent = null;
         Intent loginIntent = getIntent();
-        String redirectTo = null;
+        String redirectTo = BuildConfig.FEATURE_DEFAULT_URL;
         if (loginIntent != null && loginIntent.hasExtra(EXTRA_REDIRECT_TO)) {
             redirectTo = loginIntent.getStringExtra(EXTRA_REDIRECT_TO);
         }
@@ -547,6 +548,7 @@ public class LoginActivity extends AppCompatActivity
                     ActionSendReceiver.class,
                     ConversationActivity.class,
                     ThreadActivity.class,
+                    ForumActivity.class,
             };
             for (Class discussionActivity : discussionActivities) {
                 String discussionActivityRedirectToPrefix = discussionActivity.getSimpleName();
@@ -561,7 +563,7 @@ public class LoginActivity extends AppCompatActivity
         if (nextIntent == null) {
             nextIntent = new Intent(LoginActivity.this, MainActivity.class);
             nextIntent.putExtra(MainActivity.EXTRA_ACCESS_TOKEN, at);
-            if (TextUtils.isEmpty(redirectTo)) {
+            if (!TextUtils.isEmpty(redirectTo)) {
                 nextIntent.putExtra(MainActivity.EXTRA_URL, redirectTo);
             }
         }

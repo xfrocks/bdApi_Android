@@ -15,6 +15,7 @@ import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -27,6 +28,7 @@ import android.widget.Toast;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.ImageLoader;
 import com.xfrocks.api.androiddemo.helper.ChooserIntent;
+import com.xfrocks.api.androiddemo.persist.ObjectAsFile;
 import com.xfrocks.api.androiddemo.persist.Row;
 
 import org.json.JSONException;
@@ -144,17 +146,13 @@ public class MainActivity extends AppCompatActivity
             }
 
             if (mainIntent != null && mainIntent.hasExtra(EXTRA_URL)) {
-                addDataFragment(mainIntent.getStringExtra(EXTRA_URL), mAccessToken, true);
+                String url = mainIntent.getStringExtra(EXTRA_URL);
+                if (!TextUtils.isEmpty(url)) {
+                    addDataFragment(url, mAccessToken, true);
+                }
             }
         } else {
-            Intent loginIntent = new Intent(this, LoginActivity.class);
-
-            if (mainIntent != null && mainIntent.hasExtra(EXTRA_URL)) {
-                loginIntent.putExtra(LoginActivity.EXTRA_REDIRECT_TO, mainIntent.getStringExtra(EXTRA_URL));
-            }
-
-            startActivity(loginIntent);
-            finish();
+            startLoginActivity();
         }
     }
 
@@ -259,6 +257,18 @@ public class MainActivity extends AppCompatActivity
                     .setNegativeButton(android.R.string.no, null)
                     .show();
         }
+    }
+
+    void startLoginActivity() {
+        Intent loginIntent = new Intent(this, LoginActivity.class);
+
+        Intent mainIntent = getIntent();
+        if (mainIntent != null && mainIntent.hasExtra(EXTRA_URL)) {
+            loginIntent.putExtra(LoginActivity.EXTRA_REDIRECT_TO, mainIntent.getStringExtra(EXTRA_URL));
+        }
+
+        startActivity(loginIntent);
+        finish();
     }
 
     private void setNavigationRows(ArrayList<Row> rows) {
@@ -399,6 +409,17 @@ public class MainActivity extends AppCompatActivity
                 parseRows(response, rows);
                 Fragment fragment = DataSubFragment.newInstance(null, rows);
                 MainActivity.this.addFragmentToBackStack(fragment, true);
+            }
+        }
+
+        @Override
+        protected void onComplete() {
+            super.onComplete();
+
+            if (mUser == null) {
+                // looks like a bad access token, most likely a saved one
+                ObjectAsFile.save(MainActivity.this, ObjectAsFile.ACCESS_TOKEN, null);
+                startLoginActivity();
             }
         }
     }

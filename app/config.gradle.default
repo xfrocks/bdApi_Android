@@ -13,6 +13,7 @@ android {
         buildConfigField "String", "TWITTER_CONSUMER_SECRET", "\"\""
 
         buildConfigField "int", "FEATURE_CONFIRM_SIGN_IN_WITH_REMEMBER", "1"
+        buildConfigField "String", "FEATURE_DEFAULT_URL", "\"\""
     }
 
 }
