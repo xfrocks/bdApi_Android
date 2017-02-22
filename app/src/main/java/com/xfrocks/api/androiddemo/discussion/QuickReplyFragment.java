@@ -187,8 +187,13 @@ public class QuickReplyFragment extends Fragment {
             }
             String serverUrl = mDiscussion.getPostAttachmentsUrl(getAttachmentHash(), accessToken);
 
+            String path = uri.toString();
+            if (path.startsWith("file:///")) {
+                path = path.substring(7);
+            }
+
             String uploadId = new MultipartUploadRequest(getContext(), serverUrl)
-                    .addFileToUpload(uri.toString(), Api.PARAM_FILE)
+                    .addFileToUpload(path, Api.PARAM_FILE)
                     .setUtf8Charset()
                     .setMaxRetries(2)
                     .setDelegate(new UploadStatusDelegate() {
