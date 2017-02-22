@@ -47,7 +47,7 @@ public class ConversationActivity extends DiscussionActivity {
                 }
 
                 int messageId = ChatOrNotifReceiver.getMessageId(intent);
-                Api.DiscussionMessage latestMessage = mAdapter.getMessage(0);
+                Api.DiscussionMessage latestMessage = mAdapter.getMessageAt0();
                 if (latestMessage != null
                         && latestMessage.getId() > messageId) {
                     // this notification appeared to arrive a little too late
@@ -56,7 +56,7 @@ public class ConversationActivity extends DiscussionActivity {
 
                 // this broadcast is for new message in this conversation
                 // process it now
-                newPatchRequest().start();
+                new PatchRequest().start();
 
                 abortBroadcast();
             }
@@ -80,13 +80,8 @@ public class ConversationActivity extends DiscussionActivity {
     }
 
     @Override
-    MessagesRequest newMessagesRequest(int page) {
-        return new ConversationMessagesRequest(page);
-    }
-
-    @Override
-    PatchRequest newPatchRequest() {
-        return new ConversationPatchRequest();
+    void setDiscussion(int discussionId) {
+        setDiscussion(Api.makeConversation(discussionId));
     }
 
     @Override
@@ -137,40 +132,10 @@ public class ConversationActivity extends DiscussionActivity {
         }
     }
 
-    @Override
-    String makeAttachmentsUrl() {
-        return Api.makeAttachmentsUrl(Api.URL_CONVERSATIONS_ATTACHMENTS, getAttachmentHash(), mAccessToken);
-    }
-
-    class ConversationMessagesRequest extends MessagesRequest {
-
-        public ConversationMessagesRequest(int page) {
-            super(Api.URL_CONVERSATION_MESSAGES, new Api.Params(mAccessToken)
-                    .and(Api.URL_CONVERSATION_MESSAGES_PARAM_CONVERSATION_ID, getDiscussionId())
-                    .and(Api.PARAM_PAGE, page)
-                    .and(Api.PARAM_ORDER, Api.URL_CONVERSATION_MESSAGES_ORDER_REVERSE)
-                    .andIf(page > 1, "fields_exclude", "conversation"), page);
-        }
-    }
-
-    class ConversationPatchRequest extends PatchRequest {
-        public ConversationPatchRequest() {
-            super(Api.URL_CONVERSATION_MESSAGES, new Api.Params(mAccessToken)
-                    .and(Api.URL_CONVERSATION_MESSAGES_PARAM_CONVERSATION_ID, getDiscussionId())
-                    .and(Api.PARAM_ORDER, Api.URL_CONVERSATION_MESSAGES_ORDER_REVERSE)
-                    .and("fields_exclude", "conversation"));
-        }
-    }
-
     class PostConversationMessageRequest extends PostMessageRequest {
-        public PostConversationMessageRequest() {
-            super(Api.URL_CONVERSATION_MESSAGES, new Api.Params(mAccessToken)
-                    .and(Api.URL_CONVERSATION_MESSAGES_PARAM_CONVERSATION_ID, getDiscussionId())
-                    .and(Api.URL_CONVERSATION_MESSAGES_PARAM_MESSAGE_BODY, mQuickReply.getPendingMessage())
-                    .and(Api.URL_CONVERSATION_MESSAGES_PARAM_ATTACHMENT_HASH, getAttachmentHash())
-                    .and("fields_include", "message_id"));
-
-            mInTransitMessage = Api.makeConversationMessage(mUser, mQuickReply.getPendingMessage());
+        @Override
+        Api.DiscussionMessage makeInTransitMessage(String bodyPlainText) {
+            return Api.makeConversationMessage(mUser, bodyPlainText);
         }
     }
 }

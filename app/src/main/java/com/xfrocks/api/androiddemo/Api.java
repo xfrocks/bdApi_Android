@@ -171,13 +171,6 @@ public class Api {
         return null;
     }
 
-    public static PlaceholderDiscussion makePlaceholderDiscussion(int discussionId) {
-        PlaceholderDiscussion d = new PlaceholderDiscussion();
-        d.id = discussionId;
-
-        return d;
-    }
-
     public static ConversationMessage makeConversationMessage(JSONObject obj) {
         try {
             ConversationMessage m = new ConversationMessage();
@@ -251,6 +244,13 @@ public class Api {
         return null;
     }
 
+    public static Conversation makeConversation(int conversationId) {
+        Conversation c = new Conversation();
+        c.id = conversationId;
+
+        return c;
+    }
+
     public static Post makePost(JSONObject obj) {
         try {
             Post p = new Post();
@@ -322,6 +322,13 @@ public class Api {
         }
 
         return null;
+    }
+
+    public static Thread makeThread(int threadId) {
+        Thread t = new Thread();
+        t.id = threadId;
+
+        return t;
     }
 
     public static Attachment makeAttachment(JSONObject obj) {
@@ -426,6 +433,10 @@ public class Api {
     }
 
     private static String makeUrl(int method, String url, Map<String, String> params) {
+        if (url == null) {
+            url = "";
+        }
+
         if (!url.contains("://")) {
             url = String.format("%s/index.php?%s", BuildConfig.API_ROOT, url.replace('?', '&'));
         }
@@ -935,6 +946,15 @@ public class Api {
             return permissionUploadAttachment;
         }
 
+        abstract public String getGetMessagesUrl();
+
+        abstract public Params getGetMessagesParams(int page, AccessToken accessToken);
+
+        abstract public String getPostAttachmentsUrl(String attachmentHash, AccessToken accessToken);
+
+        abstract public String getPostMessagesUrl();
+
+        abstract public Params getPostMessagesParams(String bodyPlainText, String attachmentHash, AccessToken accessToken);
     }
 
     public static class DiscussionMessage implements Serializable {
@@ -980,17 +1000,80 @@ public class Api {
         }
     }
 
-    public static class PlaceholderDiscussion extends Discussion {
-
-    }
-
     public static class Conversation extends Discussion {
+        @Override
+        public String getGetMessagesUrl() {
+            return URL_CONVERSATION_MESSAGES;
+        }
+
+        @Override
+        public Params getGetMessagesParams(int page, AccessToken accessToken) {
+            return new Params(accessToken)
+                    .and(URL_CONVERSATION_MESSAGES_PARAM_CONVERSATION_ID, getId())
+                    .and(PARAM_PAGE, page)
+                    .and(PARAM_ORDER, Api.URL_CONVERSATION_MESSAGES_ORDER_REVERSE)
+                    .andIf(page > 1, "fields_exclude", "conversation");
+        }
+
+        @Override
+        public String getPostAttachmentsUrl(String attachmentHash, AccessToken accessToken) {
+            return makeAttachmentsUrl(URL_CONVERSATIONS_ATTACHMENTS, attachmentHash, accessToken);
+        }
+
+        @Override
+        public String getPostMessagesUrl() {
+            return URL_CONVERSATION_MESSAGES;
+        }
+
+        @Override
+        public Params getPostMessagesParams(String bodyPlainText, String attachmentHash, AccessToken accessToken) {
+            return new Params(accessToken)
+                    .and(URL_CONVERSATION_MESSAGES_PARAM_CONVERSATION_ID, getId())
+                    .and(URL_CONVERSATION_MESSAGES_PARAM_MESSAGE_BODY, bodyPlainText)
+                    .and(URL_CONVERSATION_MESSAGES_PARAM_ATTACHMENT_HASH, attachmentHash)
+                    .and("fields_include", "message_id");
+        }
     }
 
     public static class ConversationMessage extends DiscussionMessage {
     }
 
     public static class Thread extends Discussion {
+        @Override
+        public String getGetMessagesUrl() {
+            return URL_POSTS;
+        }
+
+        @Override
+        public Params getGetMessagesParams(int page, AccessToken accessToken) {
+            return new Api.Params(accessToken)
+                    .and(Api.URL_POSTS_PARAM_THREAD_ID, getId())
+                    .and(Api.PARAM_PAGE, page)
+                    .and(Api.PARAM_ORDER, Api.URL_POSTS_ORDER_REVERSE)
+                    .andIf(page > 1, "fields_exclude", "thread");
+        }
+
+        @Override
+        public String getPostAttachmentsUrl(String attachmentHash, AccessToken accessToken) {
+            String url = makeAttachmentsUrl(URL_POSTS_ATTACHMENTS, attachmentHash, accessToken);
+            url += String.format(Locale.US, "&thread_id=%d", getId());
+
+            return url;
+        }
+
+        @Override
+        public String getPostMessagesUrl() {
+            return URL_POSTS;
+        }
+
+        @Override
+        public Params getPostMessagesParams(String bodyPlainText, String attachmentHash, AccessToken accessToken) {
+            return new Params(accessToken)
+                    .and(URL_POSTS_PARAM_THREAD_ID, getId())
+                    .and(URL_POSTS_PARAM_POST_BODY, bodyPlainText)
+                    .and(URL_POSTS_PARAM_ATTACHMENT_HASH, attachmentHash)
+                    .and("fields_include", "post_id");
+        }
     }
 
     public static class Post extends DiscussionMessage {

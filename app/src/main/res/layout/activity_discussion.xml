@@ -33,18 +33,18 @@
     </android.support.design.widget.AppBarLayout>
 
     <fragment
-        android:id="@+id/quickReply"
-        android:name="com.xfrocks.api.androiddemo.QuickReplyFragment"
+        android:id="@+id/quick_reply"
+        android:name="com.xfrocks.api.androiddemo.discussion.QuickReplyFragment"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         tools:layout="@layout/fragment_quick_reply" />
 
     <android.support.v7.widget.RecyclerView
-        android:id="@+id/messageList"
+        android:id="@+id/message_list"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_above="@id/quickReply"
+        android:layout_above="@id/quick_reply"
         android:layout_below="@id/header"
         android:scrollbars="vertical" />
 

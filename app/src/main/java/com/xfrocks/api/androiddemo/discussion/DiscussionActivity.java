@@ -27,8 +27,8 @@ import com.android.volley.toolbox.ImageLoader;
 import com.xfrocks.api.androiddemo.Api;
 import com.xfrocks.api.androiddemo.App;
 import com.xfrocks.api.androiddemo.LoginActivity;
-import com.xfrocks.api.androiddemo.QuickReplyFragment;
 import com.xfrocks.api.androiddemo.R;
+import com.xfrocks.api.androiddemo.persist.ObjectAsFile;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -38,8 +38,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Locale;
-import java.util.Map;
 
 abstract public class DiscussionActivity extends AppCompatActivity implements QuickReplyFragment.Listener {
 
@@ -75,7 +73,7 @@ abstract public class DiscussionActivity extends AppCompatActivity implements Qu
         setSupportActionBar(toolbar);
         mProgressBar = (ProgressBar) findViewById(R.id.progress_bar);
 
-        mMessageList = (RecyclerView) findViewById(R.id.messageList);
+        mMessageList = (RecyclerView) findViewById(R.id.message_list);
         mMessageList.setHasFixedSize(true);
 
         mLayoutManager = new LinearLayoutManager(this);
@@ -92,7 +90,7 @@ abstract public class DiscussionActivity extends AppCompatActivity implements Qu
                         && mLayoutManager.findLastCompletelyVisibleItemPosition() > mAdapter.getItemCount() - 5
                         && mPage < mPages
                         && mMessagesRequest == null) {
-                    newMessagesRequest(mPage + 1).start();
+                    new MessagesRequest(mPage + 1).start();
                 }
             }
         });
@@ -100,7 +98,7 @@ abstract public class DiscussionActivity extends AppCompatActivity implements Qu
         mAdapter = new MessagesAdapter(this);
         mMessageList.setAdapter(mAdapter);
 
-        mQuickReply = (QuickReplyFragment) getSupportFragmentManager().findFragmentById(R.id.quickReply);
+        mQuickReply = (QuickReplyFragment) getSupportFragmentManager().findFragmentById(R.id.quick_reply);
     }
 
     @Override
@@ -130,11 +128,11 @@ abstract public class DiscussionActivity extends AppCompatActivity implements Qu
             }
 
             if (mAdapter.getItemCount() == 0) {
-                newMessagesRequest(1).start();
+                new MessagesRequest(1).start();
             }
         } else {
             Intent loginIntent = new Intent(this, LoginActivity.class);
-            loginIntent.putExtra(LoginActivity.EXTRA_REDIRECT_TO, getLoginRedirectToPrefix() + getDiscussionId());
+            loginIntent.putExtra(LoginActivity.EXTRA_REDIRECT_TO, getLoginRedirectToFull());
 
             startActivity(loginIntent);
             finish();
@@ -150,7 +148,7 @@ abstract public class DiscussionActivity extends AppCompatActivity implements Qu
             updateStatesFromIntent(intent);
 
             if (getDiscussionId() != existingDiscussionId) {
-                newMessagesRequest(1).start();
+                new MessagesRequest(1).start();
             }
         }
     }
@@ -185,7 +183,7 @@ abstract public class DiscussionActivity extends AppCompatActivity implements Qu
             mAccessToken = (Api.AccessToken) savedInstanceState.getSerializable(STATE_ACCESS_TOKEN);
 
             int discussionId = savedInstanceState.getInt(STATE_DISCUSSION_ID);
-            mDiscussion = Api.makePlaceholderDiscussion(discussionId);
+            setDiscussion(discussionId);
         }
     }
 
@@ -195,7 +193,7 @@ abstract public class DiscussionActivity extends AppCompatActivity implements Qu
             case R.id.refresh:
                 int discussionId = getDiscussionId();
                 if (discussionId > 0 && mAccessToken != null) {
-                    newMessagesRequest(1).start();
+                    new MessagesRequest(1).start();
                 }
                 break;
             case R.id.permalink:
@@ -212,7 +210,13 @@ abstract public class DiscussionActivity extends AppCompatActivity implements Qu
     }
 
     @Override
+    public Api.AccessToken getEffectiveAccessToken() {
+        return mAccessToken;
+    }
+
+    @Override
     public void onQuickReplySubmit() {
+        mQuickReply.clearViews();
         newPostMessageRequest().start();
     }
 
@@ -226,11 +230,10 @@ abstract public class DiscussionActivity extends AppCompatActivity implements Qu
         setTitle(discussion.getTitle());
 
         mDiscussion = discussion;
-        mQuickReply.setup(mDiscussion.canPostMessage(), this);
-        if (mDiscussion.canUploadAttachment()) {
-            mQuickReply.setupAttach(makeAttachmentsUrl());
-        } else {
-            mQuickReply.setupAttach(null);
+        mQuickReply.setup(mDiscussion, this);
+
+        if (mDiscussion != null) {
+            ObjectAsFile.save(this, ObjectAsFile.LATEST_DISCUSSION, mDiscussion);
         }
     }
 
@@ -242,12 +245,12 @@ abstract public class DiscussionActivity extends AppCompatActivity implements Qu
         return mDiscussion.getId();
     }
 
-    String getAttachmentHash() {
-        return String.format(Locale.US, "%s-%d", getClass().getName(), getDiscussionId());
-    }
-
     String getLoginRedirectToPrefix() {
         return getClass().getSimpleName() + "://";
+    }
+
+    String getLoginRedirectToFull() {
+        return getLoginRedirectToPrefix() + getDiscussionId();
     }
 
     void updateStatesFromIntent(Intent intent) {
@@ -278,21 +281,17 @@ abstract public class DiscussionActivity extends AppCompatActivity implements Qu
         }
 
         if (discussionId > 0 && discussionId != getDiscussionId()) {
-            setDiscussion(Api.makePlaceholderDiscussion(discussionId));
+            setDiscussion(discussionId);
         }
     }
 
-    abstract MessagesRequest newMessagesRequest(int page);
-
-    abstract PatchRequest newPatchRequest();
+    abstract void setDiscussion(int discussionId);
 
     abstract PostMessageRequest newPostMessageRequest();
 
     abstract void parseResponseForMessages(JSONObject response, ParsedMessageHandler handler);
 
     abstract void parseResponseForDiscussionThenSet(JSONObject response);
-
-    abstract String makeAttachmentsUrl();
 
     interface ParsedMessageHandler {
         boolean onMessage(Api.DiscussionMessage message);
@@ -319,12 +318,12 @@ abstract public class DiscussionActivity extends AppCompatActivity implements Qu
         }
     }
 
-    abstract class MessagesRequest extends Api.GetRequest implements ParsedMessageHandler {
+    class MessagesRequest extends Api.GetRequest implements ParsedMessageHandler {
 
         final int mRequestPage;
 
-        public MessagesRequest(String url, Api.Params params, int page) {
-            super(url, params);
+        public MessagesRequest(int page) {
+            super(mDiscussion.getGetMessagesUrl(), mDiscussion.getGetMessagesParams(page, mAccessToken));
 
             mRequestPage = page;
         }
@@ -381,12 +380,12 @@ abstract public class DiscussionActivity extends AppCompatActivity implements Qu
         }
     }
 
-    abstract class PatchRequest extends Api.GetRequest implements ParsedMessageHandler {
+    class PatchRequest extends Api.GetRequest implements ParsedMessageHandler {
         Api.DiscussionMessage mLatestMessage;
         final List<Api.DiscussionMessage> mNewMessages = new ArrayList<>();
 
-        public PatchRequest(String url, Map<String, String> params) {
-            super(url, params);
+        public PatchRequest() {
+            super(mDiscussion.getGetMessagesUrl(), mDiscussion.getGetMessagesParams(1, mAccessToken));
         }
 
         @Override
@@ -402,10 +401,10 @@ abstract public class DiscussionActivity extends AppCompatActivity implements Qu
         protected void onSuccess(JSONObject response) {
             mLatestMessage = null;
             while (mAdapter.getItemCount() > 0) {
-                Api.DiscussionMessage message = mAdapter.getMessage(0);
+                Api.DiscussionMessage message = mAdapter.getMessageAt0();
 
                 if (message.getId() == null) {
-                    mAdapter.removeMessage(0);
+                    mAdapter.removeMessageAt0();
                 } else {
                     mLatestMessage = message;
                     break;
@@ -439,10 +438,17 @@ abstract public class DiscussionActivity extends AppCompatActivity implements Qu
     }
 
     abstract class PostMessageRequest extends Api.PostRequest {
-        Api.DiscussionMessage mInTransitMessage;
+        final Api.DiscussionMessage mInTransitMessage;
 
-        public PostMessageRequest(String url, Map<String, String> params) {
-            super(url, params);
+        public PostMessageRequest() {
+            super(mDiscussion.getPostMessagesUrl(),
+                    mDiscussion.getPostMessagesParams(
+                            mQuickReply.getPendingMessage(),
+                            mQuickReply.getAttachmentHash(), mAccessToken
+                    )
+            );
+
+            mInTransitMessage = makeInTransitMessage(mQuickReply.getPendingMessage());
         }
 
         @Override
@@ -468,6 +474,8 @@ abstract public class DiscussionActivity extends AppCompatActivity implements Qu
         protected void onError(VolleyError error) {
             showError(getErrorMessage(error));
         }
+
+        abstract Api.DiscussionMessage makeInTransitMessage(String bodyPlainText);
 
         void showError(String errorMessage) {
             if (TextUtils.isEmpty(errorMessage)) {
@@ -617,10 +625,6 @@ abstract public class DiscussionActivity extends AppCompatActivity implements Qu
             notifyDataSetChanged();
         }
 
-        Api.DiscussionMessage getMessage(int index) {
-            return mData.get(index);
-        }
-
         void addMessage(Api.DiscussionMessage message) {
             mData.add(message);
             notifyItemInserted(mData.size() - 1);
@@ -631,9 +635,13 @@ abstract public class DiscussionActivity extends AppCompatActivity implements Qu
             notifyItemInserted(0);
         }
 
-        void removeMessage(int index) {
-            mData.remove(index);
-            notifyItemRemoved(index);
+        Api.DiscussionMessage getMessageAt0() {
+            return mData.get(0);
+        }
+
+        void removeMessageAt0() {
+            mData.remove(0);
+            notifyItemRemoved(0);
         }
 
         void notifyMessageChanged(Api.DiscussionMessage message) {

@@ -9,6 +9,7 @@
         android:id="@+id/thumbnail"
         android:layout_width="@dimen/attachment_thumbnail_size"
         android:layout_height="@dimen/attachment_thumbnail_size"
+        android:layout_margin="@dimen/attachment_thumbnail_margin"
         android:contentDescription="@string/attachment_thumbnail"
         android:scaleType="centerCrop"
         tools:src="@drawable/avatar_l" />

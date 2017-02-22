@@ -1,4 +1,4 @@
-package com.xfrocks.api.androiddemo;
+package com.xfrocks.api.androiddemo.discussion;
 
 import android.app.Activity;
 import android.content.Context;
@@ -9,6 +9,7 @@ import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.text.InputType;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -19,6 +20,8 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import com.xfrocks.api.androiddemo.Api;
+import com.xfrocks.api.androiddemo.R;
 import com.xfrocks.api.androiddemo.helper.ChooserIntent;
 
 import net.gotev.uploadservice.MultipartUploadRequest;
@@ -33,18 +36,20 @@ import java.util.ArrayList;
 
 public class QuickReplyFragment extends Fragment {
 
-    private static final int RC_PICK_FILE = 1;
+    static final int RC_PICK_FILE = 1;
 
-    private LinearLayout mExtra;
-    private ImageButton mAttach;
-    private EditText mMessage;
+    LinearLayout mExtra;
+    ImageButton mAttach;
+    EditText mMessage;
+    ImageButton mReply;
 
-    private String mUrlAttachments;
-    private Listener mListener;
+    Api.Discussion mDiscussion;
+    Listener mListener;
 
-    private AttachmentsAdapter mPendingAttachments;
-    private String mPendingMessage;
+    AttachmentsAdapter mPendingAttachments;
+    String mPendingMessage;
 
+    @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         return inflater.inflate(R.layout.fragment_quick_reply, container, false);
@@ -81,8 +86,8 @@ public class QuickReplyFragment extends Fragment {
             }
         });
 
-        ImageButton reply = (ImageButton) view.findViewById(R.id.reply);
-        reply.setOnClickListener(new View.OnClickListener() {
+        mReply = (ImageButton) view.findViewById(R.id.reply);
+        mReply.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 attemptReply();
@@ -106,7 +111,8 @@ public class QuickReplyFragment extends Fragment {
         }
     }
 
-    public void setup(boolean visible, Listener listener) {
+    void setup(Api.Discussion discussion, Listener listener) {
+        mDiscussion = discussion;
         mListener = listener;
 
         View view = getView();
@@ -114,28 +120,48 @@ public class QuickReplyFragment extends Fragment {
             return;
         }
 
-        if (visible) {
+        if (discussion.canPostMessage()) {
             view.setVisibility(View.VISIBLE);
         } else {
             view.setVisibility(View.GONE);
+            return;
         }
-    }
-
-    public void setupAttach(String urlAttachments) {
-        mUrlAttachments = urlAttachments;
 
         toggleExtraPanel();
     }
 
-    public String getPendingMessage() {
+    void setEditTextMessageMultiLine() {
+        mMessage.setInputType(InputType.TYPE_CLASS_TEXT
+                | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+                | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+        mMessage.setMinLines(3);
+
+        ViewGroup.LayoutParams lp = mMessage.getLayoutParams();
+        lp.height = ViewGroup.LayoutParams.WRAP_CONTENT;
+        mMessage.setLayoutParams(lp);
+    }
+
+    void setButtonReplyVisibilityGone() {
+        mReply.setVisibility(View.GONE);
+    }
+
+    String getAttachmentHash() {
+        if (mDiscussion == null) {
+            return "";
+        }
+
+        return mDiscussion.toString() + mDiscussion.getId();
+    }
+
+    String getPendingMessage() {
         return mPendingMessage;
     }
 
-    private void toggleExtraPanel() {
+    void toggleExtraPanel() {
         boolean canAttach = false;
         int visible = 0;
 
-        if (mUrlAttachments != null && mUrlAttachments.length() > 0) {
+        if (mDiscussion != null && mDiscussion.canUploadAttachment()) {
             canAttach = true;
         }
         if (canAttach) {
@@ -148,14 +174,20 @@ public class QuickReplyFragment extends Fragment {
         mExtra.setVisibility(visible > 0 ? View.VISIBLE : View.GONE);
     }
 
-    private void attemptAttach() {
+    void attemptAttach() {
         Intent chooserIntent = ChooserIntent.create(getContext(), R.string.pick_file_to_attach, "*/*");
         startActivityForResult(chooserIntent, RC_PICK_FILE);
     }
 
-    private void uploadAttach(Uri uri) {
+    void uploadAttach(Uri uri) {
         try {
-            String uploadId = new MultipartUploadRequest(getContext(), mUrlAttachments)
+            Api.AccessToken accessToken = null;
+            if (mListener != null) {
+                accessToken = mListener.getEffectiveAccessToken();
+            }
+            String serverUrl = mDiscussion.getPostAttachmentsUrl(getAttachmentHash(), accessToken);
+
+            String uploadId = new MultipartUploadRequest(getContext(), serverUrl)
                     .addFileToUpload(uri.toString(), Api.PARAM_FILE)
                     .setUtf8Charset()
                     .setMaxRetries(2)
@@ -208,26 +240,23 @@ public class QuickReplyFragment extends Fragment {
         }
     }
 
-    private void onAttachProgress(UploadInfo uploadInfo) {
+    void onAttachProgress(UploadInfo uploadInfo) {
         mPendingAttachments.updateAndNotify(uploadInfo.getUploadId(), uploadInfo.getProgressPercent());
     }
 
-    private void onAttachFailed(UploadInfo uploadInfo) {
+    void onAttachFailed(UploadInfo uploadInfo) {
         mPendingAttachments.removeAndNotify(uploadInfo.getUploadId());
     }
 
-    private void onAttachSuccess(UploadInfo uploadInfo) {
+    void onAttachSuccess(UploadInfo uploadInfo) {
         mPendingAttachments.updateAndNotify(uploadInfo.getUploadId(), 100);
     }
 
-    private void attemptReply() {
+    void attemptReply() {
         mPendingMessage = mMessage.getText().toString().trim();
         if (mPendingMessage.isEmpty()) {
             return;
         }
-        mMessage.setText("");
-
-        mPendingAttachments.clearAndNotify();
 
         if (mListener == null) {
             return;
@@ -235,12 +264,19 @@ public class QuickReplyFragment extends Fragment {
         mListener.onQuickReplySubmit();
     }
 
-    public interface Listener {
+    void clearViews() {
+        mMessage.setText("");
+        mPendingAttachments.clearAndNotify();
+    }
+
+    interface Listener {
+        Api.AccessToken getEffectiveAccessToken();
+
         void onQuickReplySubmit();
     }
 
-    private class AttachmentsAdapter extends RecyclerView.Adapter<AttachmentViewHolder> {
-        private final ArrayList<Attachment> mAttachments = new ArrayList<>();
+    class AttachmentsAdapter extends RecyclerView.Adapter<AttachmentViewHolder> {
+        final ArrayList<Attachment> mAttachments = new ArrayList<>();
 
         @Override
         public AttachmentViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
@@ -291,7 +327,7 @@ public class QuickReplyFragment extends Fragment {
             notifyDataSetChanged();
         }
 
-        private int indexOfUploadId(String uploadId) {
+        int indexOfUploadId(String uploadId) {
             for (int i = 0; i < mAttachments.size(); i++) {
                 if (uploadId.equals(mAttachments.get(i).uploadId)) {
                     return i;
@@ -302,15 +338,15 @@ public class QuickReplyFragment extends Fragment {
         }
     }
 
-    private class Attachment {
+    class Attachment {
         Uri uri;
         String uploadId;
         int percent;
     }
 
-    private class AttachmentViewHolder extends RecyclerView.ViewHolder {
-        private final ImageView thumbnail;
-        private final ImageView uploaded;
+    class AttachmentViewHolder extends RecyclerView.ViewHolder {
+        final ImageView thumbnail;
+        final ImageView uploaded;
 
         public AttachmentViewHolder(View v) {
             super(v);

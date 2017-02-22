@@ -1,0 +1,43 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:keepScreenOn="true"
+    tools:context=".discussion.ActionSendReceiver">
+
+    <LinearLayout
+        android:id="@+id/inner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <fragment
+            android:id="@+id/quick_reply"
+            android:name="com.xfrocks.api.androiddemo.discussion.QuickReplyFragment"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            tools:layout="@layout/fragment_quick_reply" />
+
+        <Button
+            android:id="@+id/button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/post_reply"
+            android:visibility="gone"
+            tools:visibility="visible" />
+
+    </LinearLayout>
+
+    <ProgressBar
+        android:id="@+id/progress_bar"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_alignBottom="@id/inner"
+        android:layout_alignEnd="@id/inner"
+        android:layout_alignStart="@id/inner"
+        android:layout_alignTop="@id/inner"
+        android:clickable="true"
+        android:visibility="gone"
+        tools:visibility="visible" />
+
+</RelativeLayout>

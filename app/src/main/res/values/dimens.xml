@@ -12,4 +12,6 @@
     <dimen name="message_margin_left">48dp</dimen>
     <dimen name="message_padding_top">8dp</dimen>
     <dimen name="message_padding_body">4dp</dimen>
+
+    <dimen name="quick_reply_message_height">40dp</dimen>
 </resources>

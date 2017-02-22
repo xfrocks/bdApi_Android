@@ -9,6 +9,7 @@ import android.os.Bundle;
 import android.os.Parcelable;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.ListFragment;
+import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -75,7 +76,9 @@ public class DataFragment extends ListFragment {
                 String url = args.getString(ARG_URL);
                 Api.AccessToken at = (Api.AccessToken) args.getSerializable(ARG_ACCESS_TOKEN);
 
-                new DataRequest(url, at).start();
+                if (!TextUtils.isEmpty(url)) {
+                    new DataRequest(url, at).start();
+                }
             }
         }
     }

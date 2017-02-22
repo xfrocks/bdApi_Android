@@ -6,7 +6,6 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -25,13 +24,8 @@ public class ThreadActivity extends DiscussionActivity {
     }
 
     @Override
-    MessagesRequest newMessagesRequest(int page) {
-        return new PostsRequest(page);
-    }
-
-    @Override
-    PatchRequest newPatchRequest() {
-        return new ThreadPatchRequest();
+    void setDiscussion(int discussionId) {
+        setDiscussion(Api.makeThread(discussionId));
     }
 
     @Override
@@ -82,43 +76,10 @@ public class ThreadActivity extends DiscussionActivity {
         }
     }
 
-    @Override
-    String makeAttachmentsUrl() {
-        String url = Api.makeAttachmentsUrl(Api.URL_POSTS_ATTACHMENTS, getAttachmentHash(), mAccessToken);
-        url += String.format(Locale.US, "&thread_id=%d", getDiscussionId());
-
-        return url;
-    }
-
-    class PostsRequest extends MessagesRequest {
-
-        public PostsRequest(int page) {
-            super(Api.URL_POSTS, new Api.Params(mAccessToken)
-                    .and(Api.URL_POSTS_PARAM_THREAD_ID, getDiscussionId())
-                    .and(Api.PARAM_PAGE, page)
-                    .and(Api.PARAM_ORDER, Api.URL_POSTS_ORDER_REVERSE)
-                    .andIf(page > 1, "fields_exclude", "thread"), page);
-        }
-    }
-
-    class ThreadPatchRequest extends PatchRequest {
-        public ThreadPatchRequest() {
-            super(Api.URL_POSTS, new Api.Params(mAccessToken)
-                    .and(Api.URL_POSTS_PARAM_THREAD_ID, getDiscussionId())
-                    .and(Api.PARAM_ORDER, Api.URL_POSTS_ORDER_REVERSE)
-                    .and("fields_exclude", "thread"));
-        }
-    }
-
     class PostPostRequest extends PostMessageRequest {
-        public PostPostRequest() {
-            super(Api.URL_POSTS, new Api.Params(mAccessToken)
-                    .and(Api.URL_POSTS_PARAM_THREAD_ID, getDiscussionId())
-                    .and(Api.URL_POSTS_PARAM_POST_BODY, mQuickReply.getPendingMessage())
-                    .and(Api.URL_POSTS_PARAM_ATTACHMENT_HASH, getAttachmentHash())
-                    .and("fields_include", "post_id"));
-
-            mInTransitMessage = Api.makePost(mUser, mQuickReply.getPendingMessage());
+        @Override
+        Api.DiscussionMessage makeInTransitMessage(String bodyPlainText) {
+            return Api.makePost(mUser, bodyPlainText);
         }
     }
 }

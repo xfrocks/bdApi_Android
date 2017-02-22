@@ -44,9 +44,12 @@ import com.twitter.sdk.android.core.TwitterAuthConfig;
 import com.twitter.sdk.android.core.TwitterException;
 import com.twitter.sdk.android.core.TwitterSession;
 import com.twitter.sdk.android.core.identity.TwitterAuthClient;
+import com.xfrocks.api.androiddemo.discussion.ActionSendReceiver;
 import com.xfrocks.api.androiddemo.discussion.ConversationActivity;
+import com.xfrocks.api.androiddemo.discussion.DiscussionActivity;
+import com.xfrocks.api.androiddemo.discussion.ThreadActivity;
 import com.xfrocks.api.androiddemo.gcm.RegistrationService;
-import com.xfrocks.api.androiddemo.persist.AccessTokenHelper;
+import com.xfrocks.api.androiddemo.persist.ObjectAsFile;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -255,7 +258,7 @@ public class LoginActivity extends AppCompatActivity
                 }
             });
 
-            if (AccessTokenHelper.load(this) == null) {
+            if (ObjectAsFile.load(this, ObjectAsFile.ACCESS_TOKEN) == null) {
                 // only register if no existing token found
                 Intent gcmIntent = new Intent(LoginActivity.this, RegistrationService.class);
                 startService(gcmIntent);
@@ -299,7 +302,7 @@ public class LoginActivity extends AppCompatActivity
     protected void onResume() {
         super.onResume();
 
-        final Api.AccessToken at = AccessTokenHelper.load(this);
+        final Api.AccessToken at = (Api.AccessToken) ObjectAsFile.load(this, ObjectAsFile.ACCESS_TOKEN);
         if (at != null) {
             mRememberView.setChecked(true);
 
@@ -316,7 +319,7 @@ public class LoginActivity extends AppCompatActivity
                             @Override
                             public void onClick(DialogInterface dialogInterface, int i) {
                                 mRememberView.setChecked(false);
-                                AccessTokenHelper.save(LoginActivity.this, null);
+                                ObjectAsFile.save(LoginActivity.this, ObjectAsFile.ACCESS_TOKEN, null);
                             }
                         })
                         .show();
@@ -534,27 +537,31 @@ public class LoginActivity extends AppCompatActivity
     private void startNextActivityAndFinish(Api.AccessToken at) {
         Intent nextIntent = null;
         Intent loginIntent = getIntent();
-        String redirectTo = "";
+        String redirectTo = null;
         if (loginIntent != null && loginIntent.hasExtra(EXTRA_REDIRECT_TO)) {
             redirectTo = loginIntent.getStringExtra(EXTRA_REDIRECT_TO);
         }
 
-        Class[] discussionActivities = new Class[]{
-                ConversationActivity.class,
-        };
-        for (Class discussionActivity : discussionActivities) {
-            String discussionActivityRedirectToPrefix = discussionActivity.getSimpleName() + "://";
-            if (redirectTo.startsWith(discussionActivityRedirectToPrefix)) {
-                nextIntent = new Intent(LoginActivity.this, ConversationActivity.class);
-                nextIntent.putExtra(ConversationActivity.EXTRA_ACCESS_TOKEN, at);
-                nextIntent.putExtra(ConversationActivity.EXTRA_LOGIN_REDIRECTED_TO, redirectTo);
+        if (!TextUtils.isEmpty(redirectTo)) {
+            Class[] discussionActivities = new Class[]{
+                    ActionSendReceiver.class,
+                    ConversationActivity.class,
+                    ThreadActivity.class,
+            };
+            for (Class discussionActivity : discussionActivities) {
+                String discussionActivityRedirectToPrefix = discussionActivity.getSimpleName();
+                if (redirectTo.startsWith(discussionActivityRedirectToPrefix)) {
+                    nextIntent = new Intent(LoginActivity.this, discussionActivity);
+                    nextIntent.putExtra(DiscussionActivity.EXTRA_ACCESS_TOKEN, at);
+                    nextIntent.putExtra(DiscussionActivity.EXTRA_LOGIN_REDIRECTED_TO, redirectTo);
+                }
             }
         }
 
         if (nextIntent == null) {
             nextIntent = new Intent(LoginActivity.this, MainActivity.class);
             nextIntent.putExtra(MainActivity.EXTRA_ACCESS_TOKEN, at);
-            if (!redirectTo.isEmpty()) {
+            if (TextUtils.isEmpty(redirectTo)) {
                 nextIntent.putExtra(MainActivity.EXTRA_URL, redirectTo);
             }
         }
@@ -646,7 +653,7 @@ public class LoginActivity extends AppCompatActivity
         protected void onStart() {
             mTokenRequest = this;
             setViewsEnabled(false);
-            AccessTokenHelper.save(LoginActivity.this, null);
+            ObjectAsFile.save(LoginActivity.this, ObjectAsFile.ACCESS_TOKEN, null);
         }
 
         @Override
@@ -687,7 +694,7 @@ public class LoginActivity extends AppCompatActivity
             }
 
             if (mRememberView.isChecked()) {
-                AccessTokenHelper.save(LoginActivity.this, at);
+                ObjectAsFile.save(LoginActivity.this, ObjectAsFile.ACCESS_TOKEN, at);
             }
 
             startNextActivityAndFinish(at);
