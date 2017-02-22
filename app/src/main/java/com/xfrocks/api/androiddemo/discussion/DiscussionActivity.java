@@ -455,7 +455,13 @@ abstract public class DiscussionActivity extends AppCompatActivity implements Qu
 
         @Override
         protected void onSuccess(JSONObject response) {
-            newPatchRequest().start();
+            String errorMessage = getErrorMessage(response);
+            if (errorMessage != null) {
+                showError(errorMessage);
+                return;
+            }
+
+            new PatchRequest().start();
         }
 
         @Override
@@ -473,6 +479,9 @@ abstract public class DiscussionActivity extends AppCompatActivity implements Qu
                     .setMessage(errorMessage)
                     .setPositiveButton(android.R.string.ok, null)
                     .show();
+
+            mInTransitMessage.errorMessage = errorMessage;
+            mAdapter.notifyMessageChanged(mInTransitMessage);
         }
     }
 
@@ -544,6 +553,8 @@ abstract public class DiscussionActivity extends AppCompatActivity implements Qu
                 String timeStr;
                 if (message.getId() != null) {
                     timeStr = mTimeFormat.format(new Date(message.getCreateDate() * 1000L));
+                } else if (!TextUtils.isEmpty(message.errorMessage)) {
+                    timeStr = getString(R.string.not_sent);
                 } else {
                     timeStr = getString(R.string.now);
                 }
@@ -623,6 +634,13 @@ abstract public class DiscussionActivity extends AppCompatActivity implements Qu
         void removeMessage(int index) {
             mData.remove(index);
             notifyItemRemoved(index);
+        }
+
+        void notifyMessageChanged(Api.DiscussionMessage message) {
+            int position = mData.indexOf(message);
+            if (position > -1) {
+                notifyItemChanged(position);
+            }
         }
     }
 

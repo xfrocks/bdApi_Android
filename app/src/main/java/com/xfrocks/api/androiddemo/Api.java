@@ -947,6 +947,8 @@ public class Api {
         Integer createDate;
         String bodyPlainText;
 
+        public String errorMessage;
+
         final List<Attachment> attachments = new ArrayList<>();
 
         public Integer getCreatorUserId() {

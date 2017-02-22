@@ -4,15 +4,15 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:paddingEnd="?attr/listPreferredItemPaddingRight"
-    android:paddingStart="?attr/listPreferredItemPaddingLeft">
+    android:paddingStart="?attr/listPreferredItemPaddingLeft"
+    android:paddingTop="@dimen/message_padding_top">
 
     <ImageView
         android:id="@+id/avatar"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
+        android:layout_width="@dimen/message_avatar_size"
+        android:layout_height="@dimen/message_avatar_size"
         android:layout_alignParentStart="true"
         android:layout_alignParentTop="true"
-        android:layout_marginTop="8dp"
         android:contentDescription="@string/avatar"
         tools:src="@drawable/avatar_l" />
 
@@ -21,11 +21,10 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true"
-        android:layout_marginStart="48dp"
-        android:layout_marginTop="8dp"
+        android:layout_marginStart="@dimen/message_margin_left"
         android:background="?attr/colorAccent"
         android:orientation="vertical"
-        android:padding="4dp">
+        android:padding="@dimen/message_padding_body">
 
         <LinearLayout
             android:id="@+id/attachments"
@@ -53,7 +52,7 @@
         android:layout_below="@id/body"
         android:textAppearance="?attr/textAppearanceListItem"
         android:textColor="?attr/colorControlNormal"
-        android:textSize="12sp"
+        android:textSize="@dimen/message_info_text_size"
         tools:text="Username · 10:10" />
 
 </RelativeLayout>

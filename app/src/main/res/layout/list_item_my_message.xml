@@ -4,7 +4,8 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:paddingEnd="?attr/listPreferredItemPaddingRight"
-    android:paddingStart="?attr/listPreferredItemPaddingLeft">
+    android:paddingStart="?attr/listPreferredItemPaddingLeft"
+    android:paddingTop="@dimen/message_padding_top">
 
     <LinearLayout
         android:id="@+id/body"
@@ -12,11 +13,10 @@
         android:layout_height="wrap_content"
         android:layout_alignParentEnd="true"
         android:layout_alignParentTop="true"
-        android:layout_marginStart="58dp"
-        android:layout_marginTop="8dp"
+        android:layout_marginStart="@dimen/my_message_margin_left"
         android:background="?attr/colorPrimaryDark"
         android:orientation="vertical"
-        android:padding="4dp">
+        android:padding="@dimen/message_padding_body">
 
         <LinearLayout
             android:id="@+id/attachments"
@@ -41,12 +41,12 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignEnd="@id/body"
-        android:layout_alignStart="@+id/body"
         android:layout_below="@id/body"
+        android:layout_marginStart="@dimen/my_message_margin_left"
         android:textAlignment="textEnd"
         android:textAppearance="?attr/textAppearanceListItem"
         android:textColor="?attr/colorControlNormal"
-        android:textSize="12sp"
+        android:textSize="@dimen/message_info_text_size"
         tools:text="10:10" />
 
 </RelativeLayout>

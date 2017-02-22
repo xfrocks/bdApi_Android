@@ -30,6 +30,7 @@
     <string name="gcm_unregister_success">Đã hủy đăng ký GCM</string>
     <string name="navigation_drawer_close">Đóng khung địa chỉ</string>
     <string name="navigation_drawer_open">Mở khung địa chỉ</string>
+    <string name="not_sent">Lỗi khi gửi</string>
     <string name="now">Vừa mới</string>
     <string name="open_in_browser">Mở trong Trình duyệt</string>
     <string name="pick_file_to_attach">Chọn tập tin để đính kèm</string>

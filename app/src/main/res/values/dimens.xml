@@ -5,4 +5,11 @@
 
     <dimen name="attachment_thumbnail_size">40dp</dimen>
     <dimen name="attachment_thumbnail_margin">5dp</dimen>
+
+    <dimen name="my_message_margin_left">58dp</dimen>
+    <dimen name="message_avatar_size">40dp</dimen>
+    <dimen name="message_info_text_size">12sp</dimen>
+    <dimen name="message_margin_left">48dp</dimen>
+    <dimen name="message_padding_top">8dp</dimen>
+    <dimen name="message_padding_body">4dp</dimen>
 </resources>
