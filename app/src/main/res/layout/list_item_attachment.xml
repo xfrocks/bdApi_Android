@@ -1,26 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:orientation="vertical">
+    android:layout_width="@dimen/attachment_thumbnail_size"
+    android:layout_height="@dimen/attachment_thumbnail_size"
+    android:layout_margin="@dimen/attachment_thumbnail_margin"
+    android:background="@color/accent"
+    android:orientation="vertical"
+    android:padding="@dimen/attachment_thumbnail_margin">
 
     <ImageView
         android:id="@+id/thumbnail"
-        android:layout_width="@dimen/attachment_thumbnail_size"
-        android:layout_height="@dimen/attachment_thumbnail_size"
-        android:layout_margin="@dimen/attachment_thumbnail_margin"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
         android:contentDescription="@string/attachment_thumbnail"
         android:scaleType="centerCrop"
         tools:src="@drawable/avatar_l" />
 
     <ImageView
         android:id="@+id/uploaded"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="@dimen/attachment_uploaded_size"
+        android:layout_height="@dimen/attachment_uploaded_size"
         android:layout_alignBottom="@id/thumbnail"
         android:layout_alignEnd="@id/thumbnail"
         android:contentDescription="@string/attachment_uploaded"
+        android:scaleType="fitXY"
         android:src="@drawable/ic_done_24dp"
         android:visibility="gone"
         tools:visibility="visible" />

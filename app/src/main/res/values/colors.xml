@@ -7,4 +7,6 @@
     <color name="facebook_blue">#3b5998</color>
     <color name="twitter_blue">#4099ff</color>
     <color name="google_red">#d34836</color>
+
+    <color name="attachment_uploaded_color">#4CAF50</color>
 </resources>

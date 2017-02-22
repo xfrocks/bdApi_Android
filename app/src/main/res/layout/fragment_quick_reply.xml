@@ -24,16 +24,20 @@
             android:id="@+id/attach"
             android:layout_width="@dimen/attachment_thumbnail_size"
             android:layout_height="@dimen/attachment_thumbnail_size"
+            android:layout_margin="@dimen/attachment_thumbnail_margin"
             android:background="@color/tw__transparent"
             android:contentDescription="@string/pick_file_to_attach"
+            android:scaleType="fitXY"
             android:src="@drawable/ic_attach_24dp" />
 
         <ImageButton
             android:id="@+id/camera"
             android:layout_width="@dimen/attachment_thumbnail_size"
             android:layout_height="@dimen/attachment_thumbnail_size"
+            android:layout_margin="@dimen/attachment_thumbnail_margin"
             android:background="@color/tw__transparent"
             android:contentDescription="@string/pick_file_to_attach"
+            android:scaleType="fitXY"
             android:src="@drawable/ic_camera_24dp" />
 
     </LinearLayout>
