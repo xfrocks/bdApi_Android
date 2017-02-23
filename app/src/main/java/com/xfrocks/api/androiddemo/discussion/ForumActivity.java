@@ -1,17 +1,21 @@
 package com.xfrocks.api.androiddemo.discussion;
 
-import com.xfrocks.api.androiddemo.Api;
+import com.google.gson.annotations.SerializedName;
+import com.xfrocks.api.androiddemo.App;
+import com.xfrocks.api.androiddemo.common.Api;
+import com.xfrocks.api.androiddemo.common.ApiBaseResponse;
+import com.xfrocks.api.androiddemo.common.ApiConstants;
+import com.xfrocks.api.androiddemo.common.model.ApiAccessToken;
+import com.xfrocks.api.androiddemo.common.model.ApiDiscussion;
+import com.xfrocks.api.androiddemo.common.model.ApiThread;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class ForumActivity extends DiscussionListActivity {
 
-    static final Pattern patternUrl = Pattern.compile("(index\\.php\\?|/)forums/(\\d+)/");
+    private static final Pattern patternUrl = Pattern.compile("(index\\.php\\?|/)forums/(\\d+)/");
 
     public static int getForumIdFromUrl(String url) {
         Matcher m = patternUrl.matcher(url);
@@ -25,38 +29,49 @@ public class ForumActivity extends DiscussionListActivity {
 
     @Override
     String getGetDiscussionsUrl() {
-        return Api.URL_THREADS;
+        return ApiConstants.URL_THREADS;
     }
 
     @Override
-    Api.Params getGetDiscussionsParams(int page, Api.AccessToken accessToken) {
+    Api.Params getGetDiscussionsParams(int page, ApiAccessToken accessToken) {
         return new Api.Params(accessToken)
-                .and(Api.PARAM_PAGE, page)
-                .and(Api.URL_THREADS_PARAM_FORUM_ID, mDiscussionContainerId)
+                .and(ApiConstants.PARAM_PAGE, page)
+                .and(ApiConstants.URL_THREADS_PARAM_FORUM_ID, mDiscussionContainerId)
                 .andIf(page > 1, "fields_exclude", "forum");
     }
 
     @Override
-    void parseResponseForDiscussions(JSONObject response, ParsedDiscussionHandler handler) {
-        if (!response.has("threads")) {
-            return;
+    ParsedDiscussions parseResponseForDiscussions(String response) {
+        return App.getGsonInstance().fromJson(response, ThreadsResponse.class);
+    }
+
+    static class ThreadsResponse extends ApiBaseResponse implements ParsedDiscussions {
+        @SerializedName("threads")
+        List<ApiThread> threads;
+
+        @Override
+        public List<? extends ApiDiscussion> getDiscussions() {
+            return threads;
         }
 
-        try {
-            JSONArray threads = response.getJSONArray("threads");
-            for (int i = 0, l = threads.length(); i < l; i++) {
-                JSONObject threadJson = threads.getJSONObject(i);
-                Api.Thread thread = Api.makeThread(threadJson);
-                if (thread == null) {
-                    return;
-                }
-
-                if (!handler.onDiscussion(thread)) {
-                    return;
-                }
+        @Override
+        public Integer getPage() {
+            Links links = getLinks();
+            if (links == null) {
+                return null;
             }
-        } catch (JSONException e) {
-            // ignore
+
+            return links.getPage();
+        }
+
+        @Override
+        public Integer getPages() {
+            Links links = getLinks();
+            if (links == null) {
+                return null;
+            }
+
+            return links.getPages();
         }
     }
 }

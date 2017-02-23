@@ -19,13 +19,13 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.android.volley.VolleyError;
+import com.xfrocks.api.androiddemo.common.model.ApiAccessToken;
 import com.xfrocks.api.androiddemo.discussion.ConversationActivity;
 import com.xfrocks.api.androiddemo.discussion.DiscussionActivity;
 import com.xfrocks.api.androiddemo.discussion.ForumActivity;
 import com.xfrocks.api.androiddemo.discussion.ThreadActivity;
-import com.xfrocks.api.androiddemo.persist.Row;
-
-import org.json.JSONObject;
+import com.xfrocks.api.androiddemo.common.Api;
+import com.xfrocks.api.androiddemo.common.persist.Row;
 
 import java.util.ArrayList;
 
@@ -42,7 +42,7 @@ public class DataFragment extends ListFragment {
     private BaseAdapter mDataAdapter;
     private Parcelable mListViewState;
 
-    public static DataFragment newInstance(String url, Api.AccessToken at) {
+    public static DataFragment newInstance(String url, ApiAccessToken at) {
         DataFragment fragment = new DataFragment();
 
         Bundle args = new Bundle();
@@ -76,7 +76,7 @@ public class DataFragment extends ListFragment {
             Bundle args = getArguments();
             if (args.containsKey(ARG_URL)) {
                 String url = args.getString(ARG_URL);
-                Api.AccessToken at = (Api.AccessToken) args.getSerializable(ARG_ACCESS_TOKEN);
+                ApiAccessToken at = (ApiAccessToken) args.getSerializable(ARG_ACCESS_TOKEN);
 
                 if (!TextUtils.isEmpty(url)) {
                     new DataRequest(url, at).start();
@@ -181,7 +181,7 @@ public class DataFragment extends ListFragment {
     }
 
     private class DataRequest extends Api.GetRequest {
-        DataRequest(String url, Api.AccessToken at) {
+        DataRequest(String url, ApiAccessToken at) {
             super(url, new Api.Params(at));
         }
 
@@ -193,7 +193,7 @@ public class DataFragment extends ListFragment {
         }
 
         @Override
-        protected void onSuccess(JSONObject response) {
+        protected void onSuccess(String response) {
             parseRows(response, mData);
         }
 

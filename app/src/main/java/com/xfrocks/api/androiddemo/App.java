@@ -9,7 +9,10 @@ import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.HttpStack;
 import com.android.volley.toolbox.HurlStack;
 import com.android.volley.toolbox.Volley;
-import com.xfrocks.api.androiddemo.helper.PubKeyManager;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.xfrocks.api.androiddemo.common.PubKeyManager;
+import com.xfrocks.api.androiddemo.common.model.ApiAccessToken;
 
 import net.gotev.uploadservice.Logger;
 import net.gotev.uploadservice.UploadService;
@@ -25,6 +28,7 @@ public class App extends MultiDexApplication {
     private static App sInstance;
 
     private RequestQueue mRequestQueue;
+    private Gson mGsonInstance;
 
     @Override
     public void onCreate() {
@@ -56,6 +60,18 @@ public class App extends MultiDexApplication {
 
     public RequestQueue getRequestQueue() {
         return mRequestQueue;
+    }
+
+    public static Gson getGsonInstance() {
+        App app = getInstance();
+
+        if (app.mGsonInstance == null) {
+            app.mGsonInstance = new GsonBuilder()
+                    .registerTypeAdapter(ApiAccessToken.class, new ApiAccessToken.ApiAccessTokenCreator())
+                    .create();
+        }
+
+        return app.mGsonInstance;
     }
 
     public synchronized static App getInstance() {

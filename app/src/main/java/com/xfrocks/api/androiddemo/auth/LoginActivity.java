@@ -1,4 +1,4 @@
-package com.xfrocks.api.androiddemo;
+package com.xfrocks.api.androiddemo.auth;
 
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
@@ -37,6 +37,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.gms.auth.api.signin.GoogleSignInResult;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.gson.annotations.SerializedName;
 import com.twitter.sdk.android.Twitter;
 import com.twitter.sdk.android.core.Callback;
 import com.twitter.sdk.android.core.Result;
@@ -44,17 +45,22 @@ import com.twitter.sdk.android.core.TwitterAuthConfig;
 import com.twitter.sdk.android.core.TwitterException;
 import com.twitter.sdk.android.core.TwitterSession;
 import com.twitter.sdk.android.core.identity.TwitterAuthClient;
+import com.xfrocks.api.androiddemo.App;
+import com.xfrocks.api.androiddemo.BuildConfig;
+import com.xfrocks.api.androiddemo.MainActivity;
+import com.xfrocks.api.androiddemo.R;
+import com.xfrocks.api.androiddemo.common.Api;
+import com.xfrocks.api.androiddemo.common.ApiConstants;
+import com.xfrocks.api.androiddemo.common.ApiBaseResponse;
+import com.xfrocks.api.androiddemo.common.model.ApiAccessToken;
+import com.xfrocks.api.androiddemo.common.model.ApiUser;
+import com.xfrocks.api.androiddemo.common.persist.ObjectAsFile;
 import com.xfrocks.api.androiddemo.discussion.ActionSendReceiver;
 import com.xfrocks.api.androiddemo.discussion.ConversationActivity;
 import com.xfrocks.api.androiddemo.discussion.DiscussionActivity;
 import com.xfrocks.api.androiddemo.discussion.ForumActivity;
 import com.xfrocks.api.androiddemo.discussion.ThreadActivity;
 import com.xfrocks.api.androiddemo.gcm.RegistrationService;
-import com.xfrocks.api.androiddemo.persist.ObjectAsFile;
-
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -286,7 +292,7 @@ public class LoginActivity extends AppCompatActivity
             case RC_REGISTER:
                 if (resultCode == RESULT_OK
                         && data.hasExtra(RegisterActivity.RESULT_EXTRA_ACCESS_TOKEN)) {
-                    Api.AccessToken at = (Api.AccessToken) data.getSerializableExtra(RegisterActivity.RESULT_EXTRA_ACCESS_TOKEN);
+                    ApiAccessToken at = (ApiAccessToken) data.getSerializableExtra(RegisterActivity.RESULT_EXTRA_ACCESS_TOKEN);
                     if (at != null) {
                         attemptLogin(at);
                     }
@@ -303,7 +309,7 @@ public class LoginActivity extends AppCompatActivity
     protected void onResume() {
         super.onResume();
 
-        final Api.AccessToken at = (Api.AccessToken) ObjectAsFile.load(this, ObjectAsFile.ACCESS_TOKEN);
+        final ApiAccessToken at = (ApiAccessToken) ObjectAsFile.load(this, ObjectAsFile.ACCESS_TOKEN);
         if (at != null) {
             mRememberView.setChecked(true);
 
@@ -402,7 +408,7 @@ public class LoginActivity extends AppCompatActivity
         startActivity(intent);
     }
 
-    private void register(Api.User u) {
+    private void register(ApiUser u) {
         Intent registerIntent = new Intent(LoginActivity.this, RegisterActivity.class);
         if (u != null) {
             registerIntent.putExtra(RegisterActivity.EXTRA_USER, u);
@@ -515,7 +521,7 @@ public class LoginActivity extends AppCompatActivity
         setIntent(intent);
     }
 
-    private boolean attemptLogin(Api.AccessToken at) {
+    private boolean attemptLogin(ApiAccessToken at) {
         if (mTokenRequest != null) {
             return false;
         }
@@ -535,7 +541,7 @@ public class LoginActivity extends AppCompatActivity
         return true;
     }
 
-    private void startNextActivityAndFinish(Api.AccessToken at) {
+    private void startNextActivityAndFinish(ApiAccessToken at) {
         Intent nextIntent = null;
         Intent loginIntent = getIntent();
         String redirectTo = BuildConfig.FEATURE_DEFAULT_URL;
@@ -644,7 +650,7 @@ public class LoginActivity extends AppCompatActivity
 
     private abstract class TokenRequest extends Api.PostRequest {
         TokenRequest(Map<String, String> params) {
-            super(Api.URL_OAUTH_TOKEN, params);
+            super(ApiConstants.URL_OAUTH_TOKEN, params);
         }
 
         TokenRequest(String url, Map<String, String> params) {
@@ -659,39 +665,33 @@ public class LoginActivity extends AppCompatActivity
         }
 
         @Override
-        protected void onSuccess(JSONObject response) {
-            Api.AccessToken at = Api.makeAccessToken(response);
-            if (at == null) {
-                if (response.has("user_data")) {
-                    try {
-                        Api.User u = Api.makeUser(response.getJSONObject("user_data"));
-                        if (u != null) {
-                            register(u);
-                        }
-                        return;
-                    } catch (JSONException e) {
-                        // ignore
-                    }
-                }
+        protected void onSuccess(String response) {
+            ApiAccessToken at = App.getGsonInstance().fromJson(response, ApiAccessToken.class);
+            if (at.getUser() != null) {
+                register(at.getUser());
+                return;
+            }
 
-                if (mResponseHeaders != null
-                        && mResponseHeaders.containsKey(Api.URL_OAUTH_TOKEN_RESPONSE_HEADER_TFA_PROVIDERS)) {
-                    String headerValue = mResponseHeaders.get(Api.URL_OAUTH_TOKEN_RESPONSE_HEADER_TFA_PROVIDERS);
-                    String[] providerIds = headerValue.split(",");
+            if (mResponseHeaders != null
+                    && mResponseHeaders.containsKey(ApiConstants.URL_OAUTH_TOKEN_RESPONSE_HEADER_TFA_PROVIDERS)) {
+                String headerValue = mResponseHeaders.get(ApiConstants.URL_OAUTH_TOKEN_RESPONSE_HEADER_TFA_PROVIDERS);
+                String[] providerIds = headerValue.split(",");
 
-                    FragmentManager fm = getSupportFragmentManager();
-                    TfaDialogFragment tfaDialog = TfaDialogFragment.newInstance(providerIds);
-                    tfaDialog.show(fm, tfaDialog.getClass().getSimpleName());
+                FragmentManager fm = getSupportFragmentManager();
+                TfaDialogFragment tfaDialog = TfaDialogFragment.newInstance(providerIds);
+                tfaDialog.show(fm, tfaDialog.getClass().getSimpleName());
 
-                    return;
-                }
+                return;
+            }
 
-                String errorMessage = getErrorMessage(response);
-                if (errorMessage != null) {
-                    Toast.makeText(LoginActivity.this, errorMessage, Toast.LENGTH_LONG).show();
-                    return;
-                }
+            ApiBaseResponse data = App.getGsonInstance().fromJson(response, ApiBaseResponse.class);
+            String error = data.getError();
+            if (!TextUtils.isEmpty(error)) {
+                Toast.makeText(LoginActivity.this, error, Toast.LENGTH_LONG).show();
+                return;
+            }
 
+            if (TextUtils.isEmpty(at.getToken())) {
                 return;
             }
 
@@ -722,16 +722,16 @@ public class LoginActivity extends AppCompatActivity
         PasswordRequest(String email, String password, String tfaProviderId, String tfaProviderCode) {
             super(
                     new Api.Params(
-                            Api.URL_OAUTH_TOKEN_PARAM_GRANT_TYPE,
-                            Api.URL_OAUTH_TOKEN_PARAM_GRANT_TYPE_PASSWORD)
-                            .and(Api.URL_OAUTH_TOKEN_PARAM_USERNAME, email)
-                            .and(Api.URL_OAUTH_TOKEN_PARAM_PASSWORD, password)
+                            ApiConstants.URL_OAUTH_TOKEN_PARAM_GRANT_TYPE,
+                            ApiConstants.URL_OAUTH_TOKEN_PARAM_GRANT_TYPE_PASSWORD)
+                            .and(ApiConstants.URL_OAUTH_TOKEN_PARAM_USERNAME, email)
+                            .and(ApiConstants.URL_OAUTH_TOKEN_PARAM_PASSWORD, password)
                             .andIf(tfaProviderId != null,
-                                    Api.URL_OAUTH_TOKEN_PARAM_TFA_PROVIDER_ID, tfaProviderId)
+                                    ApiConstants.URL_OAUTH_TOKEN_PARAM_TFA_PROVIDER_ID, tfaProviderId)
                             .andIf(tfaProviderId != null && tfaProviderCode == null,
-                                    Api.URL_OAUTH_TOKEN_PARAM_TFA_TRIGGER, 1)
+                                    ApiConstants.URL_OAUTH_TOKEN_PARAM_TFA_TRIGGER, 1)
                             .andIf(tfaProviderId != null && tfaProviderCode != null,
-                                    Api.URL_OAUTH_TOKEN_PARAM_TFA_PROVIDER_CODE, tfaProviderCode)
+                                    ApiConstants.URL_OAUTH_TOKEN_PARAM_TFA_PROVIDER_CODE, tfaProviderCode)
                             .andClientCredentials()
             );
         }
@@ -741,10 +741,10 @@ public class LoginActivity extends AppCompatActivity
         AuthorizationCodeRequest(String code, String redirectTo) {
             super(
                     new Api.Params(
-                            Api.URL_OAUTH_TOKEN_PARAM_GRANT_TYPE,
-                            Api.URL_OAUTH_TOKEN_PARAM_GRANT_TYPE_AUTHORIZATION_CODE)
-                            .and(Api.URL_OAUTH_TOKEN_PARAM_CODE, code)
-                            .and(Api.URL_OAUTH_TOKEN_PARAM_REDIRECT_URI, Api.makeAuthorizeRedirectUri(redirectTo))
+                            ApiConstants.URL_OAUTH_TOKEN_PARAM_GRANT_TYPE,
+                            ApiConstants.URL_OAUTH_TOKEN_PARAM_GRANT_TYPE_AUTHORIZATION_CODE)
+                            .and(ApiConstants.URL_OAUTH_TOKEN_PARAM_CODE, code)
+                            .and(ApiConstants.URL_OAUTH_TOKEN_PARAM_REDIRECT_URI, Api.makeAuthorizeRedirectUri(redirectTo))
                             .andClientCredentials()
             );
         }
@@ -762,80 +762,81 @@ public class LoginActivity extends AppCompatActivity
         RefreshTokenRequest(String refreshToken) {
             super(
                     new Api.Params(
-                            Api.URL_OAUTH_TOKEN_PARAM_GRANT_TYPE,
-                            Api.URL_OAUTH_TOKEN_PARAM_GRANT_TYPE_REFRESH_TOKEN)
-                            .and(Api.URL_OAUTH_TOKEN_PARAM_REFRESH_TOKEN, refreshToken)
+                            ApiConstants.URL_OAUTH_TOKEN_PARAM_GRANT_TYPE,
+                            ApiConstants.URL_OAUTH_TOKEN_PARAM_GRANT_TYPE_REFRESH_TOKEN)
+                            .and(ApiConstants.URL_OAUTH_TOKEN_PARAM_REFRESH_TOKEN, refreshToken)
                             .andClientCredentials()
             );
         }
     }
 
-    private class ToolsLoginSocialRequest extends Api.PostRequest {
+    class ToolsLoginSocialRequest extends Api.PostRequest {
         ToolsLoginSocialRequest() {
-            super(Api.URL_TOOLS_LOGIN_SOCIAL, new Api.Params(Api.makeOneTimeToken(0, null)));
+            super(ApiConstants.URL_TOOLS_LOGIN_SOCIAL, new Api.Params(Api.makeOneTimeToken(0, null)));
         }
 
         @Override
-        protected void onSuccess(JSONObject response) {
-            try {
-                if (response.has("social")) {
-                    JSONArray networks = response.getJSONArray("social");
-                    boolean facebook = false;
-                    boolean twitter = false;
-                    boolean google = false;
-
-                    for (int i = 0; i < networks.length(); i++) {
-                        String network = networks.getString(i);
-                        switch (network) {
-                            case "facebook":
-                                facebook = true;
-                                break;
-                            case "twitter":
-                                twitter = true;
-                                break;
-                            case "google":
-                                google = true;
-                                break;
-                        }
-                    }
-
-                    setSocialVisibilities(facebook, twitter, google);
-                }
-            } catch (JSONException e) {
-                // ignore
+        protected void onSuccess(String response) {
+            ToolsLoginSocialResponse data = App.getGsonInstance().fromJson(response, ToolsLoginSocialResponse.class);
+            if (data.networks == null) {
+                return;
             }
+
+            boolean facebook = false;
+            boolean twitter = false;
+            boolean google = false;
+            for (String network : data.networks) {
+                switch (network) {
+                    case "facebook":
+                        facebook = true;
+                        break;
+                    case "twitter":
+                        twitter = true;
+                        break;
+                    case "google":
+                        google = true;
+                        break;
+                }
+            }
+
+            setSocialVisibilities(facebook, twitter, google);
         }
     }
 
-    private class TokenFacebookRequest extends TokenRequest {
+    class TokenFacebookRequest extends TokenRequest {
         TokenFacebookRequest(String accessToken) {
             super(
-                    Api.URL_OAUTH_TOKEN_FACEBOOK,
-                    new Api.Params(Api.URL_OAUTH_TOKEN_FACEBOOK_PARAM_TOKEN, accessToken)
+                    ApiConstants.URL_OAUTH_TOKEN_FACEBOOK,
+                    new Api.Params(ApiConstants.URL_OAUTH_TOKEN_FACEBOOK_PARAM_TOKEN, accessToken)
                             .andClientCredentials()
             );
         }
     }
 
-    private class TokenTwitterRequest extends TokenRequest {
+    class TokenTwitterRequest extends TokenRequest {
         TokenTwitterRequest(String uri, String auth) {
             super(
-                    Api.URL_OAUTH_TOKEN_TWITTER,
-                    new Api.Params(Api.URL_OAUTH_TOKEN_TWITTER_PARAM_URI, uri)
-                            .and(Api.URL_OAUTH_TOKEN_TWITTER_PARAM_AUTH, auth)
+                    ApiConstants.URL_OAUTH_TOKEN_TWITTER,
+                    new Api.Params(ApiConstants.URL_OAUTH_TOKEN_TWITTER_PARAM_URI, uri)
+                            .and(ApiConstants.URL_OAUTH_TOKEN_TWITTER_PARAM_AUTH, auth)
                             .andClientCredentials()
             );
         }
     }
 
-    private class TokenGoogleRequest extends TokenRequest {
+    class TokenGoogleRequest extends TokenRequest {
         TokenGoogleRequest(String idToken) {
             super(
-                    Api.URL_OAUTH_TOKEN_GOOGLE,
-                    new Api.Params(Api.URL_OAUTH_TOKEN_GOOGLE_PARAM_TOKEN, idToken)
+                    ApiConstants.URL_OAUTH_TOKEN_GOOGLE,
+                    new Api.Params(ApiConstants.URL_OAUTH_TOKEN_GOOGLE_PARAM_TOKEN, idToken)
                             .andClientCredentials()
             );
         }
+    }
+
+    static class ToolsLoginSocialResponse {
+        @SerializedName("social")
+        String[] networks;
     }
 }
 

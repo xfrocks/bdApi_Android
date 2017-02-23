@@ -2,7 +2,7 @@ package com.xfrocks.api.androiddemo;
 
 import android.os.Bundle;
 
-import com.xfrocks.api.androiddemo.persist.Row;
+import com.xfrocks.api.androiddemo.common.persist.Row;
 
 import java.util.ArrayList;
 

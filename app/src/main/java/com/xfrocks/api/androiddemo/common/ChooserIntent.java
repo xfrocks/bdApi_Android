@@ -1,4 +1,4 @@
-package com.xfrocks.api.androiddemo.helper;
+package com.xfrocks.api.androiddemo.common;
 
 import android.content.ComponentName;
 import android.content.ContentResolver;
@@ -17,12 +17,12 @@ import java.util.List;
 
 public class ChooserIntent {
 
-    public static Intent create(Context context, String title, String type) {
+    public static Intent create(Context context, int titleResId, String type) {
         Intent pickIntent = new Intent();
         pickIntent.setType(type);
         pickIntent.setAction(Intent.ACTION_GET_CONTENT);
 
-        Intent chooserIntent = Intent.createChooser(pickIntent, title);
+        Intent chooserIntent = Intent.createChooser(pickIntent, context.getString(titleResId));
         chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, buildCameraIntents(context));
 
         return chooserIntent;
@@ -43,10 +43,6 @@ public class ChooserIntent {
         }
 
         return cameraIntents.toArray(new Intent[cameraIntents.size()]);
-    }
-
-    public static Intent create(Context context, int titleResId, String type) {
-        return create(context, context.getString(titleResId), type);
     }
 
     public static Uri getUriFromChooser(Context context, Intent data) {

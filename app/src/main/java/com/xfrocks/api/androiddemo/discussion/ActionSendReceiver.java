@@ -13,26 +13,25 @@ import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 
 import com.android.volley.VolleyError;
-import com.xfrocks.api.androiddemo.Api;
-import com.xfrocks.api.androiddemo.LoginActivity;
 import com.xfrocks.api.androiddemo.R;
-import com.xfrocks.api.androiddemo.persist.ObjectAsFile;
-
-import org.json.JSONObject;
+import com.xfrocks.api.androiddemo.auth.LoginActivity;
+import com.xfrocks.api.androiddemo.common.Api;
+import com.xfrocks.api.androiddemo.common.model.ApiAccessToken;
+import com.xfrocks.api.androiddemo.common.model.ApiDiscussion;
+import com.xfrocks.api.androiddemo.common.persist.ObjectAsFile;
 
 public class ActionSendReceiver extends AppCompatActivity implements QuickReplyFragment.Listener {
 
-    static final String QUERY_PARAM_ACTION = "action";
-    static final String QUERY_PARAM_TYPE = "type";
-    static final String QUERY_PARAM_STREAM = "stream";
+    private static final String QUERY_PARAM_ACTION = "action";
+    private static final String QUERY_PARAM_TYPE = "type";
+    private static final String QUERY_PARAM_STREAM = "stream";
 
-    LinearLayout mInner;
-    QuickReplyFragment mQuickReply;
-    Button mButton;
-    ProgressBar mProgressBar;
+    private LinearLayout mInner;
+    private QuickReplyFragment mQuickReply;
+    private ProgressBar mProgressBar;
 
-    Api.AccessToken mAccessToken;
-    Api.Discussion mDiscussion;
+    private ApiAccessToken mAccessToken;
+    private ApiDiscussion mDiscussion;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -63,10 +62,10 @@ public class ActionSendReceiver extends AppCompatActivity implements QuickReplyF
         }
 
         if (intent.hasExtra(DiscussionActivity.EXTRA_ACCESS_TOKEN)) {
-            mAccessToken = (Api.AccessToken) intent.getSerializableExtra(DiscussionActivity.EXTRA_ACCESS_TOKEN);
+            mAccessToken = (ApiAccessToken) intent.getSerializableExtra(DiscussionActivity.EXTRA_ACCESS_TOKEN);
         }
         if (mAccessToken == null) {
-            mAccessToken = (Api.AccessToken) ObjectAsFile.load(this, ObjectAsFile.ACCESS_TOKEN);
+            mAccessToken = (ApiAccessToken) ObjectAsFile.load(this, ObjectAsFile.ACCESS_TOKEN);
         }
         if (mAccessToken == null || !mAccessToken.isValid()) {
             String loginRedirectTo = new Uri.Builder()
@@ -84,7 +83,7 @@ public class ActionSendReceiver extends AppCompatActivity implements QuickReplyF
             return;
         }
 
-        mDiscussion = (Api.Discussion) ObjectAsFile.load(this, ObjectAsFile.LATEST_DISCUSSION);
+        mDiscussion = (ApiDiscussion) ObjectAsFile.load(this, ObjectAsFile.LATEST_DISCUSSION);
         if (mDiscussion == null || !mDiscussion.canUploadAttachment()) {
             finish();
             return;
@@ -98,7 +97,7 @@ public class ActionSendReceiver extends AppCompatActivity implements QuickReplyF
         mQuickReply = (QuickReplyFragment) getSupportFragmentManager().findFragmentById(R.id.quick_reply);
         mQuickReply.setup(mDiscussion, this);
 
-        mButton = (Button) findViewById(R.id.button);
+        Button mButton = (Button) findViewById(R.id.button);
         if (mButton != null) {
             mQuickReply.setButtonReplyVisibilityGone();
             mQuickReply.setEditTextMessageMultiLine();
@@ -120,7 +119,7 @@ public class ActionSendReceiver extends AppCompatActivity implements QuickReplyF
     }
 
     @Override
-    public Api.AccessToken getEffectiveAccessToken() {
+    public ApiAccessToken getEffectiveAccessToken() {
         return mAccessToken;
     }
 
@@ -129,7 +128,7 @@ public class ActionSendReceiver extends AppCompatActivity implements QuickReplyF
         new PostMessageRequest().start();
     }
 
-    void setTheProgressBarVisibility(boolean visible) {
+    private void setTheProgressBarVisibility(boolean visible) {
         if (mInner != null) {
             mInner.setAlpha(visible ? .5f : 1f);
         }
@@ -140,7 +139,7 @@ public class ActionSendReceiver extends AppCompatActivity implements QuickReplyF
     }
 
     class PostMessageRequest extends Api.PostRequest {
-        public PostMessageRequest() {
+        PostMessageRequest() {
             super(mDiscussion.getPostMessagesUrl(),
                     mDiscussion.getPostMessagesParams(
                             mQuickReply.getPendingMessage(),
@@ -157,7 +156,7 @@ public class ActionSendReceiver extends AppCompatActivity implements QuickReplyF
         }
 
         @Override
-        protected void onSuccess(JSONObject response) {
+        protected void onSuccess(String response) {
             ActionSendReceiver.this.finish();
         }
 

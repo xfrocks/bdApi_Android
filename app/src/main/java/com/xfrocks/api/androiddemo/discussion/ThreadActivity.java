@@ -1,17 +1,20 @@
 package com.xfrocks.api.androiddemo.discussion;
 
-import com.xfrocks.api.androiddemo.Api;
+import com.google.gson.annotations.SerializedName;
+import com.xfrocks.api.androiddemo.App;
+import com.xfrocks.api.androiddemo.common.ApiBaseResponse;
+import com.xfrocks.api.androiddemo.common.model.ApiDiscussion;
+import com.xfrocks.api.androiddemo.common.model.ApiDiscussionMessage;
+import com.xfrocks.api.androiddemo.common.model.ApiPost;
+import com.xfrocks.api.androiddemo.common.model.ApiThread;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class ThreadActivity extends DiscussionActivity {
 
-    static final Pattern patternUrl = Pattern.compile("(index\\.php\\?|/)threads/(\\d+)/");
+    private static final Pattern patternUrl = Pattern.compile("(index\\.php\\?|/)threads/(\\d+)/");
 
     public static int getThreadIdFromUrl(String url) {
         Matcher m = patternUrl.matcher(url);
@@ -25,61 +28,49 @@ public class ThreadActivity extends DiscussionActivity {
 
     @Override
     void setDiscussion(int discussionId) {
-        setDiscussion(Api.makeThread(discussionId));
+        setDiscussion(ApiThread.incompleteWithId(discussionId));
     }
 
     @Override
-    PostMessageRequest newPostMessageRequest() {
-        return new PostPostRequest();
+    ParsedMessages parseResponseForMessages(String response) {
+        return App.getGsonInstance().fromJson(response, PostsResponse.class);
     }
 
-    @Override
-    void parseResponseForMessages(JSONObject response, ParsedMessageHandler handler) {
-        if (!response.has("posts")) {
-            return;
-        }
+    static class PostsResponse extends ApiBaseResponse implements ParsedMessages {
+        @SerializedName("posts")
+        List<ApiPost> posts;
 
-        try {
-            JSONArray posts = response.getJSONArray("posts");
-            for (int i = 0, l = posts.length(); i < l; i++) {
-                JSONObject postJson = posts.getJSONObject(i);
-                Api.Post post = Api.makePost(postJson);
-                if (post == null) {
-                    return;
-                }
+        @SerializedName("thread")
+        ApiThread thread;
 
-                if (!handler.onMessage(post)) {
-                    return;
-                }
-            }
-        } catch (JSONException e) {
-            // ignore
-        }
-    }
-
-    @Override
-    void parseResponseForDiscussionThenSet(JSONObject response) {
-        if (!response.has("thread")) {
-            return;
-        }
-
-        try {
-            JSONObject threadJson = response.getJSONObject("thread");
-            Api.Thread thread = Api.makeThread(threadJson);
-            if (thread == null) {
-                return;
-            }
-
-            setDiscussion(thread);
-        } catch (JSONException e) {
-            // ignore
-        }
-    }
-
-    class PostPostRequest extends PostMessageRequest {
         @Override
-        Api.DiscussionMessage makeInTransitMessage(String bodyPlainText) {
-            return Api.makePost(mUser, bodyPlainText);
+        public List<? extends ApiDiscussionMessage> getMessages() {
+            return posts;
+        }
+
+        @Override
+        public ApiDiscussion getDiscussion() {
+            return thread;
+        }
+
+        @Override
+        public Integer getPage() {
+            Links links = getLinks();
+            if (links == null) {
+                return null;
+            }
+
+            return links.getPage();
+        }
+
+        @Override
+        public Integer getPages() {
+            Links links = getLinks();
+            if (links == null) {
+                return null;
+            }
+
+            return links.getPages();
         }
     }
 }

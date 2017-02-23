@@ -27,18 +27,22 @@ import android.widget.Toast;
 
 import com.android.volley.VolleyError;
 import com.bumptech.glide.Glide;
-import com.xfrocks.api.androiddemo.helper.ChooserIntent;
-import com.xfrocks.api.androiddemo.persist.ObjectAsFile;
-import com.xfrocks.api.androiddemo.persist.Row;
-
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.google.gson.annotations.SerializedName;
+import com.xfrocks.api.androiddemo.auth.LoginActivity;
+import com.xfrocks.api.androiddemo.common.ApiBaseResponse;
+import com.xfrocks.api.androiddemo.common.ApiConstants;
+import com.xfrocks.api.androiddemo.common.ApiUsersMeRequest;
+import com.xfrocks.api.androiddemo.common.ChooserIntent;
+import com.xfrocks.api.androiddemo.common.Api;
+import com.xfrocks.api.androiddemo.common.model.ApiAccessToken;
+import com.xfrocks.api.androiddemo.common.model.ApiUser;
+import com.xfrocks.api.androiddemo.common.persist.ObjectAsFile;
+import com.xfrocks.api.androiddemo.common.persist.Row;
 
 import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -64,9 +68,9 @@ public class MainActivity extends AppCompatActivity
     private FloatingActionButton mPost;
     private final Map<String, String> mPostLinks = new HashMap<>();
 
-    private Api.AccessToken mAccessToken;
+    private ApiAccessToken mAccessToken;
     private ArrayList<Row> mNavigationRows = new ArrayList<>();
-    private Api.User mUser;
+    private ApiUser mUser;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -133,7 +137,7 @@ public class MainActivity extends AppCompatActivity
 
         Intent mainIntent = getIntent();
         if (mainIntent != null && mainIntent.hasExtra(EXTRA_ACCESS_TOKEN)) {
-            mAccessToken = (Api.AccessToken) mainIntent.getSerializableExtra(EXTRA_ACCESS_TOKEN);
+            mAccessToken = (ApiAccessToken) mainIntent.getSerializableExtra(EXTRA_ACCESS_TOKEN);
         }
 
         if (mAccessToken != null) {
@@ -183,7 +187,7 @@ public class MainActivity extends AppCompatActivity
         }
 
         if (savedInstanceState.containsKey(STATE_USER)) {
-            setUser((Api.User) savedInstanceState.getSerializable(STATE_USER));
+            setUser((ApiUser) savedInstanceState.getSerializable(STATE_USER));
         }
     }
 
@@ -259,7 +263,7 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
-    void startLoginActivity() {
+    private void startLoginActivity() {
         Intent loginIntent = new Intent(this, LoginActivity.class);
 
         Intent mainIntent = getIntent();
@@ -282,7 +286,7 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
-    private void setUser(Api.User u) {
+    private void setUser(ApiUser u) {
         mUser = u;
 
         if (mUser != null) {
@@ -305,7 +309,7 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
-    public void addDataFragment(String url, Api.AccessToken at, boolean clearStack) {
+    public void addDataFragment(String url, ApiAccessToken at, boolean clearStack) {
         Fragment fragment = DataFragment.newInstance(url, at);
         addFragmentToBackStack(fragment, clearStack);
     }
@@ -324,17 +328,17 @@ public class MainActivity extends AppCompatActivity
                 .commit();
     }
 
-    public Api.AccessToken getAccessToken() {
+    public ApiAccessToken getAccessToken() {
         return mAccessToken;
     }
 
-    public Api.User getUser() {
+    public ApiUser getUser() {
         return mUser;
     }
 
-    private class IndexRequest extends Api.GetRequest {
-        public IndexRequest(Api.AccessToken at) {
-            super(Api.URL_INDEX, new Api.Params(at));
+    class IndexRequest extends Api.GetRequest {
+        IndexRequest(ApiAccessToken at) {
+            super(ApiConstants.URL_INDEX, new Api.Params(at));
         }
 
         @Override
@@ -344,65 +348,46 @@ public class MainActivity extends AppCompatActivity
         }
 
         @Override
-        protected void onSuccess(JSONObject response) {
-            if (response.has("links")) {
-                try {
-                    JSONObject links = response.getJSONObject("links");
-                    Iterator<String> keys = links.keys();
-                    ArrayList<Row> rows = new ArrayList<>(links.names().length());
+        protected void onSuccess(String response) {
+            IndexResponse data = App.getGsonInstance().fromJson(response, IndexResponse.class);
 
-                    while (keys.hasNext()) {
-                        final Row row = new Row();
-                        row.key = keys.next();
-                        row.value = links.getString(row.key);
-                        rows.add(row);
-                    }
+            if (data.links != null) {
+                ArrayList<Row> rows = new ArrayList<>(data.links.size());
 
-                    setNavigationRows(rows);
-                } catch (JSONException e) {
-                    // ignore
+                for (Map.Entry<String, String> link : data.links.entrySet()) {
+                    final Row row = new Row();
+                    row.key = link.getKey();
+                    row.value = link.getValue();
+                    rows.add(row);
                 }
+
+                setNavigationRows(rows);
             }
 
-            if (response.has("post")) {
-                try {
-                    JSONObject postLinks = response.getJSONObject("post");
-
-                    Iterator<String> keys = postLinks.keys();
-                    while (keys.hasNext()) {
-                        final String key = keys.next();
-                        mPostLinks.put(key, postLinks.getString(key));
-                    }
-                } catch (JSONException e) {
-                    // ignore
+            if (data.post != null) {
+                for (Map.Entry<String, String> post : data.post.entrySet()) {
+                    mPostLinks.put(post.getKey(), post.getValue());
                 }
-            }
-            if (mPostLinks.size() > 0) {
-                mPost.setVisibility(View.VISIBLE);
+                if (mPostLinks.size() > 0) {
+                    mPost.setVisibility(View.VISIBLE);
+                }
             }
         }
     }
 
-    private class UsersMeRequest extends Api.GetRequest {
-        public UsersMeRequest(Api.AccessToken at) {
-            super(Api.URL_USERS_ME, new Api.Params(at));
+    class UsersMeRequest extends ApiUsersMeRequest {
+        UsersMeRequest(ApiAccessToken at) {
+            super(new Listener() {
+                @Override
+                public void onUsersMeRequestSuccess(ApiUser user) {
+                    setUser(user);
+                }
+            }, at);
         }
 
         @Override
-        protected void onSuccess(JSONObject response) {
-            Api.User u = null;
-
-            if (response.has("user")) {
-                try {
-                    u = Api.makeUser(response.getJSONObject("user"));
-                } catch (JSONException e) {
-                    // ignore
-                }
-            }
-
-            if (u != null) {
-                setUser(u);
-            }
+        protected void onSuccess(String response) {
+            super.onSuccess(response);
 
             if (getSupportFragmentManager().getBackStackEntryCount() == 0) {
                 ArrayList<Row> rows = new ArrayList<>();
@@ -424,23 +409,23 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
-    private class UsersMeAvatarRequest extends Api.PostRequest {
-        public UsersMeAvatarRequest(Api.AccessToken at, String fileName, InputStream inputStream) {
-            super(Api.URL_USERS_ME_AVATAR, new Api.Params(at));
+    class UsersMeAvatarRequest extends Api.PostRequest {
+        UsersMeAvatarRequest(ApiAccessToken at, String fileName, InputStream inputStream) {
+            super(ApiConstants.URL_USERS_ME_AVATAR, new Api.Params(at));
 
             try {
-                addFile(Api.URL_USERS_ME_AVATAR_PARAM_AVATAR, fileName, inputStream);
+                addFile(ApiConstants.URL_USERS_ME_AVATAR_PARAM_AVATAR, fileName, inputStream);
             } catch (IllegalAccessException e) {
                 Log.e(getTag().toString(), e.toString());
             }
         }
 
         @Override
-        protected void onSuccess(JSONObject response) {
-            String message = getErrorMessage(response);
-
-            if (message != null) {
-                Toast.makeText(MainActivity.this, message, Toast.LENGTH_LONG).show();
+        protected void onSuccess(String response) {
+            ApiBaseResponse data = App.getGsonInstance().fromJson(response, ApiBaseResponse.class);
+            String error = data.getError();
+            if (!TextUtils.isEmpty(error)) {
+                Toast.makeText(MainActivity.this, error, Toast.LENGTH_LONG).show();
             }
         }
 
@@ -459,4 +444,11 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
+    static class IndexResponse {
+        @SerializedName("links")
+        Map<String, String> links;
+
+        @SerializedName("post")
+        Map<String, String> post;
+    }
 }

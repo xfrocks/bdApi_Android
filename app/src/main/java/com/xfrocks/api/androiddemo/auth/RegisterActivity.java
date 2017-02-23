@@ -1,4 +1,4 @@
-package com.xfrocks.api.androiddemo;
+package com.xfrocks.api.androiddemo.auth;
 
 import android.app.ProgressDialog;
 import android.content.Intent;
@@ -13,10 +13,15 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import com.google.gson.annotations.SerializedName;
+import com.xfrocks.api.androiddemo.App;
+import com.xfrocks.api.androiddemo.R;
+import com.xfrocks.api.androiddemo.common.ApiConstants;
+import com.xfrocks.api.androiddemo.common.ApiBaseResponse;
 import com.xfrocks.api.androiddemo.common.DatePickerDialogFragment;
-
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.xfrocks.api.androiddemo.common.Api;
+import com.xfrocks.api.androiddemo.common.model.ApiAccessToken;
+import com.xfrocks.api.androiddemo.common.model.ApiUser;
 
 import java.util.Locale;
 
@@ -26,7 +31,7 @@ public class RegisterActivity extends AppCompatActivity
 
     public static final String EXTRA_USER = "user";
     public static final String RESULT_EXTRA_ACCESS_TOKEN = "access_token";
-    static final int DATE_PICKER_RC_DOB = 1;
+    private static final int DATE_PICKER_RC_DOB = 1;
 
     private EditText mEmailView;
     private EditText mUsernameView;
@@ -38,8 +43,8 @@ public class RegisterActivity extends AppCompatActivity
     private Integer mDobYear;
     private Integer mDobMonth;
     private Integer mDobDay;
-    private Api.User mTargetUser;
-    private Api.User[] mAssocUsers;
+    private ApiUser mTargetUser;
+    private ApiUser[] mAssocUsers;
     private String mExtraData;
     private long mExtraTimestamp;
     private Api.PostRequest mRegisterRequest;
@@ -84,7 +89,7 @@ public class RegisterActivity extends AppCompatActivity
 
         Intent registerIntent = getIntent();
         if (registerIntent != null && registerIntent.hasExtra(EXTRA_USER)) {
-            Api.User u = (Api.User) registerIntent.getSerializableExtra(EXTRA_USER);
+            ApiUser u = (ApiUser) registerIntent.getSerializableExtra(EXTRA_USER);
 
             final String username = u.getUsername();
             if (!TextUtils.isEmpty(username)) {
@@ -113,12 +118,12 @@ public class RegisterActivity extends AppCompatActivity
                 TabLayout mTabLayout = (TabLayout) findViewById(R.id.tab);
                 mTabLayout.setVisibility(View.VISIBLE);
                 mTabLayout.addTab(mTabLayout.newTab().setText(R.string.action_register));
-                for (Api.User assocUser : mAssocUsers) {
+                for (ApiUser assocUser : mAssocUsers) {
                     mTabLayout.addTab(mTabLayout.newTab()
                             .setText(assocUser.getUsername() != null
                                     ? assocUser.getUsername()
                                     : assocUser.getEmail())
-                            .setTag(assocUser.getUserId()));
+                            .setTag(assocUser.getId()));
                 }
                 mTabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
                     @Override
@@ -262,7 +267,7 @@ public class RegisterActivity extends AppCompatActivity
         if (cancel) {
             focusView.requestFocus();
         } else {
-            new AssociateRequest(mTargetUser.getUserId(), password, tfaProviderId, tfaProviderCode).start();
+            new AssociateRequest(mTargetUser.getId(), password, tfaProviderId, tfaProviderCode).start();
         }
     }
 
@@ -276,8 +281,8 @@ public class RegisterActivity extends AppCompatActivity
 
     private void setRegisterOrAssociate(int userId) {
         mTargetUser = null;
-        for (Api.User assocUser : mAssocUsers) {
-            if (assocUser.getUserId() == userId) {
+        for (ApiUser assocUser : mAssocUsers) {
+            if (assocUser.getId() == userId) {
                 mTargetUser = assocUser;
             }
         }
@@ -339,14 +344,14 @@ public class RegisterActivity extends AppCompatActivity
                         String email,
                         String password,
                         int dobYear, int dobMonth, int dobDay) {
-            super(Api.URL_USERS, new Api.Params(Api.URL_USERS_PARAM_USERNAME, username)
-                    .and(Api.URL_USERS_PARAM_EMAIL, email)
-                    .and(Api.URL_USERS_PARAM_PASSWORD, password)
-                    .and(Api.URL_USERS_PARAM_DOB_YEAR, dobYear)
-                    .and(Api.URL_USERS_PARAM_DOB_MONTH, dobMonth)
-                    .and(Api.URL_USERS_PARAM_DOB_DAY, dobDay)
-                    .and(Api.URL_USERS_PARAM_EXTRA_DATA, mExtraData)
-                    .and(Api.URL_USERS_PARAM_EXTRA_TIMESTAMP, mExtraTimestamp)
+            super(ApiConstants.URL_USERS, new Api.Params(ApiConstants.URL_USERS_PARAM_USERNAME, username)
+                    .and(ApiConstants.URL_USERS_PARAM_EMAIL, email)
+                    .and(ApiConstants.URL_USERS_PARAM_PASSWORD, password)
+                    .and(ApiConstants.URL_USERS_PARAM_DOB_YEAR, dobYear)
+                    .and(ApiConstants.URL_USERS_PARAM_DOB_MONTH, dobMonth)
+                    .and(ApiConstants.URL_USERS_PARAM_DOB_DAY, dobDay)
+                    .and(ApiConstants.URL_USERS_PARAM_EXTRA_DATA, mExtraData)
+                    .and(ApiConstants.URL_USERS_PARAM_EXTRA_TIMESTAMP, mExtraTimestamp)
                     .andClientCredentials());
         }
 
@@ -357,28 +362,22 @@ public class RegisterActivity extends AppCompatActivity
         }
 
         @Override
-        protected void onSuccess(JSONObject response) {
-            if (response.has("token")) {
-                try {
-                    Api.AccessToken at = Api.makeAccessToken(response.getJSONObject("token"));
-                    if (at != null) {
-                        Intent resultIntent = new Intent();
-                        resultIntent.putExtra(RESULT_EXTRA_ACCESS_TOKEN, at);
-                        setResult(RESULT_OK, resultIntent);
-                        finish();
-                        return;
-                    }
-                } catch (JSONException e) {
-                    // ignore
-                }
-            }
-
-            String errorMessage = getErrorMessage(response);
-            if (TextUtils.isEmpty(errorMessage)) {
+        protected void onSuccess(String response) {
+            RegisterResponse data = App.getGsonInstance().fromJson(response, RegisterResponse.class);
+            if (data.at != null) {
+                Intent resultIntent = new Intent();
+                resultIntent.putExtra(RESULT_EXTRA_ACCESS_TOKEN, data.at);
+                setResult(RESULT_OK, resultIntent);
+                finish();
                 return;
             }
 
-            Toast.makeText(RegisterActivity.this, errorMessage, Toast.LENGTH_LONG).show();
+            String error = data.getError();
+            if (TextUtils.isEmpty(error)) {
+                return;
+            }
+
+            Toast.makeText(RegisterActivity.this, error, Toast.LENGTH_LONG).show();
         }
 
         @Override
@@ -390,16 +389,16 @@ public class RegisterActivity extends AppCompatActivity
 
     class AssociateRequest extends Api.PostRequest {
         AssociateRequest(int userId, String password, String tfaProviderId, String tfaProviderCode) {
-            super(Api.URL_OAUTH_TOKEN_ASSOCIATE, new Api.Params(Api.URL_USERS_PARAM_USER_ID, userId)
-                    .and(Api.URL_USERS_PARAM_PASSWORD, password)
-                    .and(Api.URL_USERS_PARAM_EXTRA_DATA, mExtraData)
-                    .and(Api.URL_USERS_PARAM_EXTRA_TIMESTAMP, mExtraTimestamp)
+            super(ApiConstants.URL_OAUTH_TOKEN_ASSOCIATE, new Api.Params(ApiConstants.URL_USERS_PARAM_USER_ID, userId)
+                    .and(ApiConstants.URL_USERS_PARAM_PASSWORD, password)
+                    .and(ApiConstants.URL_USERS_PARAM_EXTRA_DATA, mExtraData)
+                    .and(ApiConstants.URL_USERS_PARAM_EXTRA_TIMESTAMP, mExtraTimestamp)
                     .andIf(tfaProviderId != null,
-                            Api.URL_OAUTH_TOKEN_PARAM_TFA_PROVIDER_ID, tfaProviderId)
+                            ApiConstants.URL_OAUTH_TOKEN_PARAM_TFA_PROVIDER_ID, tfaProviderId)
                     .andIf(tfaProviderId != null && tfaProviderCode == null,
-                            Api.URL_OAUTH_TOKEN_PARAM_TFA_TRIGGER, 1)
+                            ApiConstants.URL_OAUTH_TOKEN_PARAM_TFA_TRIGGER, 1)
                     .andIf(tfaProviderId != null && tfaProviderCode != null,
-                            Api.URL_OAUTH_TOKEN_PARAM_TFA_PROVIDER_CODE, tfaProviderCode)
+                            ApiConstants.URL_OAUTH_TOKEN_PARAM_TFA_PROVIDER_CODE, tfaProviderCode)
                     .andClientCredentials());
         }
 
@@ -410,9 +409,9 @@ public class RegisterActivity extends AppCompatActivity
         }
 
         @Override
-        protected void onSuccess(JSONObject response) {
-            Api.AccessToken at = Api.makeAccessToken(response);
-            if (at != null) {
+        protected void onSuccess(String response) {
+            ApiAccessToken at = App.getGsonInstance().fromJson(response, ApiAccessToken.class);
+            if (!TextUtils.isEmpty(at.getToken())) {
                 Intent resultIntent = new Intent();
                 resultIntent.putExtra(RESULT_EXTRA_ACCESS_TOKEN, at);
                 setResult(RESULT_OK, resultIntent);
@@ -421,8 +420,8 @@ public class RegisterActivity extends AppCompatActivity
             }
 
             if (mResponseHeaders != null
-                    && mResponseHeaders.containsKey(Api.URL_OAUTH_TOKEN_RESPONSE_HEADER_TFA_PROVIDERS)) {
-                String headerValue = mResponseHeaders.get(Api.URL_OAUTH_TOKEN_RESPONSE_HEADER_TFA_PROVIDERS);
+                    && mResponseHeaders.containsKey(ApiConstants.URL_OAUTH_TOKEN_RESPONSE_HEADER_TFA_PROVIDERS)) {
+                String headerValue = mResponseHeaders.get(ApiConstants.URL_OAUTH_TOKEN_RESPONSE_HEADER_TFA_PROVIDERS);
                 String[] providerIds = headerValue.split(",");
 
                 FragmentManager fm = getSupportFragmentManager();
@@ -432,12 +431,13 @@ public class RegisterActivity extends AppCompatActivity
                 return;
             }
 
-            String errorMessage = getErrorMessage(response);
-            if (TextUtils.isEmpty(errorMessage)) {
+            ApiBaseResponse data = App.getGsonInstance().fromJson(response, ApiBaseResponse.class);
+            String error = data.getError();
+            if (TextUtils.isEmpty(error)) {
                 return;
             }
 
-            Toast.makeText(RegisterActivity.this, errorMessage, Toast.LENGTH_LONG).show();
+            Toast.makeText(RegisterActivity.this, error, Toast.LENGTH_LONG).show();
         }
 
         @Override
@@ -445,6 +445,11 @@ public class RegisterActivity extends AppCompatActivity
             mRegisterRequest = null;
             setViewsEnabled(true);
         }
+    }
+
+    static class RegisterResponse extends ApiBaseResponse {
+        @SerializedName("token")
+        ApiAccessToken at;
     }
 }
 

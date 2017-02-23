@@ -1,4 +1,4 @@
-package com.xfrocks.api.androiddemo.helper;
+package com.xfrocks.api.androiddemo.common;
 
 import java.math.BigInteger;
 import java.security.cert.CertificateException;
@@ -30,7 +30,7 @@ public final class PubKeyManager implements X509TrustManager {
         return new X509Certificate[0];
     }
 
-    protected void _isTrusted(X509Certificate[] chain) throws CertificateException {
+    private void _isTrusted(X509Certificate[] chain) throws CertificateException {
         // https://medium.com/@faruktoptas/android-security-tip-public-key-pinning-with-volley-library-fb85bf761857
         // this method has been simplified to bypass all CA check
         // and rely solely on public key verification

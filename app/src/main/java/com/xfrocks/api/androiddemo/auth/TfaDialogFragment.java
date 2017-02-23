@@ -1,4 +1,4 @@
-package com.xfrocks.api.androiddemo;
+package com.xfrocks.api.androiddemo.auth;
 
 import android.app.Activity;
 import android.os.Bundle;
@@ -16,6 +16,8 @@ import android.widget.EditText;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
+
+import com.xfrocks.api.androiddemo.R;
 
 public class TfaDialogFragment extends DialogFragment
         implements TextView.OnEditorActionListener,

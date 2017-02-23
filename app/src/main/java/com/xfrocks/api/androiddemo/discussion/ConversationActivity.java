@@ -6,19 +6,22 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
 
-import com.xfrocks.api.androiddemo.Api;
+import com.google.gson.annotations.SerializedName;
+import com.xfrocks.api.androiddemo.App;
+import com.xfrocks.api.androiddemo.common.ApiBaseResponse;
+import com.xfrocks.api.androiddemo.common.model.ApiConversation;
+import com.xfrocks.api.androiddemo.common.model.ApiConversationMessage;
+import com.xfrocks.api.androiddemo.common.model.ApiDiscussion;
+import com.xfrocks.api.androiddemo.common.model.ApiDiscussionMessage;
 import com.xfrocks.api.androiddemo.gcm.ChatOrNotifReceiver;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class ConversationActivity extends DiscussionActivity {
 
-    static final Pattern patternUrl = Pattern.compile("(index\\.php\\?|/)conversations/(\\d+)/");
+    private static final Pattern patternUrl = Pattern.compile("(index\\.php\\?|/)conversations/(\\d+)/");
 
     public static int getConversationIdFromUrl(String url) {
         Matcher m = patternUrl.matcher(url);
@@ -30,7 +33,7 @@ public class ConversationActivity extends DiscussionActivity {
         return 0;
     }
 
-    BroadcastReceiver mBroadcastReceiver;
+    private BroadcastReceiver mBroadcastReceiver;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,7 +50,7 @@ public class ConversationActivity extends DiscussionActivity {
                 }
 
                 int messageId = ChatOrNotifReceiver.getMessageId(intent);
-                Api.DiscussionMessage latestMessage = mAdapter.getMessageAt0();
+                ApiDiscussionMessage latestMessage = mAdapter.getMessageAt0();
                 if (latestMessage != null
                         && latestMessage.getId() > messageId) {
                     // this notification appeared to arrive a little too late
@@ -81,61 +84,49 @@ public class ConversationActivity extends DiscussionActivity {
 
     @Override
     void setDiscussion(int discussionId) {
-        setDiscussion(Api.makeConversation(discussionId));
+        setDiscussion(ApiConversation.incompleteWithId(discussionId));
     }
 
     @Override
-    PostMessageRequest newPostMessageRequest() {
-        return new PostConversationMessageRequest();
+    ParsedMessages parseResponseForMessages(String response) {
+        return App.getGsonInstance().fromJson(response, ConversationMessagesResponse.class);
     }
 
-    @Override
-    void parseResponseForMessages(JSONObject response, ParsedMessageHandler handler) {
-        if (!response.has("messages")) {
-            return;
-        }
+    static class ConversationMessagesResponse extends ApiBaseResponse implements ParsedMessages {
+        @SerializedName("messages")
+        List<ApiConversationMessage> messages;
 
-        try {
-            JSONArray messages = response.getJSONArray("messages");
-            for (int i = 0, l = messages.length(); i < l; i++) {
-                JSONObject messageJson = messages.getJSONObject(i);
-                Api.ConversationMessage message = Api.makeConversationMessage(messageJson);
-                if (message == null) {
-                    return;
-                }
+        @SerializedName("conversation")
+        ApiConversation conversation;
 
-                if (!handler.onMessage(message)) {
-                    return;
-                }
-            }
-        } catch (JSONException e) {
-            // ignore
-        }
-    }
-
-    @Override
-    void parseResponseForDiscussionThenSet(JSONObject response) {
-        if (!response.has("conversation")) {
-            return;
-        }
-
-        try {
-            JSONObject conversationJson = response.getJSONObject("conversation");
-            Api.Conversation conversation = Api.makeConversation(conversationJson);
-            if (conversation == null) {
-                return;
-            }
-
-            setDiscussion(conversation);
-        } catch (JSONException e) {
-            // ignore
-        }
-    }
-
-    class PostConversationMessageRequest extends PostMessageRequest {
         @Override
-        Api.DiscussionMessage makeInTransitMessage(String bodyPlainText) {
-            return Api.makeConversationMessage(mUser, bodyPlainText);
+        public List<? extends ApiDiscussionMessage> getMessages() {
+            return messages;
+        }
+
+        @Override
+        public ApiDiscussion getDiscussion() {
+            return conversation;
+        }
+
+        @Override
+        public Integer getPage() {
+            Links links = getLinks();
+            if (links == null) {
+                return null;
+            }
+
+            return links.getPage();
+        }
+
+        @Override
+        public Integer getPages() {
+            Links links = getLinks();
+            if (links == null) {
+                return null;
+            }
+
+            return links.getPages();
         }
     }
 }

@@ -7,19 +7,15 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.widget.Toast;
 
-import com.android.volley.NetworkResponse;
-import com.android.volley.Response;
-import com.android.volley.toolbox.HttpHeaderParser;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.gcm.GoogleCloudMessaging;
 import com.google.android.gms.iid.InstanceID;
-import com.xfrocks.api.androiddemo.Api;
+import com.xfrocks.api.androiddemo.common.Api;
 import com.xfrocks.api.androiddemo.App;
 import com.xfrocks.api.androiddemo.BuildConfig;
 import com.xfrocks.api.androiddemo.R;
-
-import org.json.JSONObject;
+import com.xfrocks.api.androiddemo.common.model.ApiAccessToken;
 
 import java.util.Locale;
 
@@ -66,9 +62,9 @@ public class RegistrationService extends IntentService {
                 if (intent.getBooleanExtra(EXTRA_UNREGISTER, false)) {
                     sendUnregistrationToServer(token);
                 } else {
-                    Api.AccessToken at = null;
+                    ApiAccessToken at = null;
                     if (intent.hasExtra(EXTRA_ACCESS_TOKEN)) {
-                        at = (Api.AccessToken) intent.getSerializableExtra(EXTRA_ACCESS_TOKEN);
+                        at = (ApiAccessToken) intent.getSerializableExtra(EXTRA_ACCESS_TOKEN);
                     }
 
                     sendRegistrationToServer(token, at);
@@ -82,7 +78,7 @@ public class RegistrationService extends IntentService {
         }
     }
 
-    private void sendRegistrationToServer(String gcmToken, Api.AccessToken at) {
+    private void sendRegistrationToServer(String gcmToken, ApiAccessToken at) {
         long userId = 0;
 
         if (at != null) {
@@ -103,14 +99,14 @@ public class RegistrationService extends IntentService {
     private static class RegisterRequest extends Api.PushServerRequest {
         private final long mUserId;
 
-        RegisterRequest(String gcmToken, long userId, Api.AccessToken at) {
+        RegisterRequest(String gcmToken, long userId, ApiAccessToken at) {
             super(gcmToken, userId > 0 ? String.format(Locale.US, "user_notification_%d", userId) : "", at);
 
             mUserId = userId;
         }
 
         @Override
-        protected void onSuccess(JSONObject response) {
+        protected void onSuccess(String response) {
             final Toast t;
             final Context c = App.getInstance().getApplicationContext();
 
@@ -132,7 +128,7 @@ public class RegistrationService extends IntentService {
     }
 
     private static class UnregisterRequest extends Api.PostRequest {
-        public UnregisterRequest(String gcmToken) {
+        UnregisterRequest(String gcmToken) {
             super(
                     BuildConfig.PUSH_SERVER + "/unregister",
                     new Api.Params("device_type", "android")
@@ -142,12 +138,7 @@ public class RegistrationService extends IntentService {
         }
 
         @Override
-        protected Response<JSONObject> parseNetworkResponse(NetworkResponse response) {
-            return Response.success(null, HttpHeaderParser.parseCacheHeaders(response));
-        }
-
-        @Override
-        protected void onSuccess(JSONObject response) {
+        protected void onSuccess(String response) {
             final Context c = App.getInstance().getApplicationContext();
             Toast.makeText(c, R.string.gcm_unregister_success, Toast.LENGTH_LONG).show();
 

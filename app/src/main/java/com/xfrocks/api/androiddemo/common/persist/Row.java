@@ -1,4 +1,4 @@
-package com.xfrocks.api.androiddemo.persist;
+package com.xfrocks.api.androiddemo.common.persist;
 
 import android.os.Parcel;
 import android.os.Parcelable;

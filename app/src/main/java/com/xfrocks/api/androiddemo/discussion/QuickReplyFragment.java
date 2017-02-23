@@ -25,10 +25,12 @@ import android.widget.TextView;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.animation.GlideAnimation;
 import com.bumptech.glide.request.target.SimpleTarget;
-import com.xfrocks.api.androiddemo.Api;
 import com.xfrocks.api.androiddemo.App;
 import com.xfrocks.api.androiddemo.R;
-import com.xfrocks.api.androiddemo.helper.ChooserIntent;
+import com.xfrocks.api.androiddemo.common.ApiConstants;
+import com.xfrocks.api.androiddemo.common.ChooserIntent;
+import com.xfrocks.api.androiddemo.common.model.ApiAccessToken;
+import com.xfrocks.api.androiddemo.common.model.ApiDiscussion;
 
 import net.gotev.uploadservice.MultipartUploadRequest;
 import net.gotev.uploadservice.ServerResponse;
@@ -45,19 +47,19 @@ import java.util.ArrayList;
 
 public class QuickReplyFragment extends Fragment {
 
-    static final int RC_PICK_FILE = 1;
+    private static final int RC_PICK_FILE = 1;
 
-    LinearLayout mExtra;
-    ImageButton mAttach;
-    ImageButton mCamera;
-    EditText mMessage;
-    ImageButton mReply;
+    private LinearLayout mExtra;
+    private ImageButton mAttach;
+    private ImageButton mCamera;
+    private EditText mMessage;
+    private ImageButton mReply;
 
-    Api.Discussion mDiscussion;
-    Listener mListener;
+    private ApiDiscussion mDiscussion;
+    private Listener mListener;
 
-    AttachmentsAdapter mPendingAttachments;
-    String mPendingMessage;
+    private AttachmentsAdapter mPendingAttachments;
+    private String mPendingMessage;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -135,7 +137,7 @@ public class QuickReplyFragment extends Fragment {
         }
     }
 
-    void setup(Api.Discussion discussion, Listener listener) {
+    void setup(ApiDiscussion discussion, Listener listener) {
         mDiscussion = discussion;
         mListener = listener;
 
@@ -181,7 +183,7 @@ public class QuickReplyFragment extends Fragment {
         return mPendingMessage;
     }
 
-    void toggleExtraPanel() {
+    private void toggleExtraPanel() {
         boolean canAttach = false;
         int visible = 0;
 
@@ -207,12 +209,12 @@ public class QuickReplyFragment extends Fragment {
         mExtra.setVisibility(visible > 0 ? View.VISIBLE : View.GONE);
     }
 
-    void attemptAttach() {
+    private void attemptAttach() {
         Intent chooserIntent = ChooserIntent.create(getContext(), R.string.pick_file_to_attach, "*/*");
         startActivityForResult(chooserIntent, RC_PICK_FILE);
     }
 
-    void attemptCamera() {
+    private void attemptCamera() {
         Intent[] cameraIntents = ChooserIntent.buildCameraIntents(getContext());
         if (cameraIntents.length == 0) {
             // TODO: device without camera?
@@ -222,7 +224,7 @@ public class QuickReplyFragment extends Fragment {
         startActivityForResult(cameraIntents[0], RC_PICK_FILE);
     }
 
-    void attemptResize(final Uri uri, int size) {
+    private void attemptResize(final Uri uri, int size) {
         Glide.with(getActivity().getApplicationContext())
                 .load(uri)
                 .asBitmap()
@@ -236,7 +238,7 @@ public class QuickReplyFragment extends Fragment {
                 });
     }
 
-    void onImageResized(Uri uri, Bitmap resource) {
+    private void onImageResized(Uri uri, Bitmap resource) {
         String fileName = ChooserIntent.getFileNameFromUri(getContext(), uri);
         String prefix = fileName;
         String suffix = null;
@@ -279,8 +281,8 @@ public class QuickReplyFragment extends Fragment {
         }
     }
 
-    void uploadAttach(Uri uri, String path, String fileName) {
-        Api.AccessToken accessToken = null;
+    private void uploadAttach(Uri uri, String path, String fileName) {
+        ApiAccessToken accessToken = null;
         if (mListener != null) {
             accessToken = mListener.getEffectiveAccessToken();
         }
@@ -299,7 +301,7 @@ public class QuickReplyFragment extends Fragment {
 
         try {
             String uploadId = new MultipartUploadRequest(getContext(), serverUrl)
-                    .addFileToUpload(path, Api.PARAM_FILE, fileName)
+                    .addFileToUpload(path, ApiConstants.PARAM_FILE, fileName)
                     .setUtf8Charset()
                     .setAutoDeleteFilesAfterSuccessfulUpload(true)
                     .setMaxRetries(2)
@@ -352,15 +354,15 @@ public class QuickReplyFragment extends Fragment {
         }
     }
 
-    void onAttachProgress(UploadInfo uploadInfo) {
+    private void onAttachProgress(UploadInfo uploadInfo) {
         mPendingAttachments.updateAndNotify(uploadInfo.getUploadId(), uploadInfo.getProgressPercent());
     }
 
-    void onAttachFailed(UploadInfo uploadInfo) {
+    private void onAttachFailed(UploadInfo uploadInfo) {
         mPendingAttachments.removeAndNotify(uploadInfo.getUploadId());
     }
 
-    void onAttachSuccess(UploadInfo uploadInfo) {
+    private void onAttachSuccess(UploadInfo uploadInfo) {
         mPendingAttachments.updateAndNotify(uploadInfo.getUploadId(), 100);
     }
 
@@ -382,7 +384,8 @@ public class QuickReplyFragment extends Fragment {
     }
 
     interface Listener {
-        Api.AccessToken getEffectiveAccessToken();
+
+        ApiAccessToken getEffectiveAccessToken();
 
         void onQuickReplySubmit();
     }
@@ -411,12 +414,12 @@ public class QuickReplyFragment extends Fragment {
             return mAttachments.size();
         }
 
-        public void addAttachmentAndNotify(Attachment attachment) {
+        void addAttachmentAndNotify(Attachment attachment) {
             mAttachments.add(attachment);
             notifyItemInserted(mAttachments.size() - 1);
         }
 
-        public void removeAndNotify(String uploadId) {
+        void removeAndNotify(String uploadId) {
             int foundIndex = indexOfUploadId(uploadId);
 
             if (foundIndex > -1) {
@@ -425,7 +428,7 @@ public class QuickReplyFragment extends Fragment {
             }
         }
 
-        public void updateAndNotify(String uploadId, int percent) {
+        void updateAndNotify(String uploadId, int percent) {
             int foundIndex = indexOfUploadId(uploadId);
 
             if (foundIndex > -1) {
@@ -434,7 +437,7 @@ public class QuickReplyFragment extends Fragment {
             }
         }
 
-        public void clearAndNotify() {
+        void clearAndNotify() {
             mAttachments.clear();
             notifyDataSetChanged();
         }
@@ -460,7 +463,7 @@ public class QuickReplyFragment extends Fragment {
         final ImageView thumbnail;
         final ImageView uploaded;
 
-        public AttachmentViewHolder(View v) {
+        AttachmentViewHolder(View v) {
             super(v);
 
             thumbnail = (ImageView) v.findViewById(R.id.thumbnail);

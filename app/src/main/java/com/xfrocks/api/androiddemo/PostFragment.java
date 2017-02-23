@@ -23,12 +23,11 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.android.volley.VolleyError;
-import com.xfrocks.api.androiddemo.helper.ChooserIntent;
-import com.xfrocks.api.androiddemo.persist.Row;
-
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.google.gson.annotations.SerializedName;
+import com.xfrocks.api.androiddemo.common.ChooserIntent;
+import com.xfrocks.api.androiddemo.common.Api;
+import com.xfrocks.api.androiddemo.common.model.ApiAccessToken;
+import com.xfrocks.api.androiddemo.common.persist.Row;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -49,10 +48,10 @@ public class PostFragment extends ListFragment {
 
     private BaseAdapter mDataAdapter;
     private String mUrl;
-    private Api.AccessToken mAccessToken;
+    private ApiAccessToken mAccessToken;
     private String mCurrentKey = null;
 
-    public static PostFragment newInstance(String url, Api.AccessToken at) {
+    public static PostFragment newInstance(String url, ApiAccessToken at) {
         PostFragment fragment = new PostFragment();
 
         Bundle args = new Bundle();
@@ -113,7 +112,7 @@ public class PostFragment extends ListFragment {
             Bundle args = getArguments();
             if (args.containsKey(ARG_URL)) {
                 mUrl = args.getString(ARG_URL);
-                mAccessToken = (Api.AccessToken) args.getSerializable(ARG_ACCESS_TOKEN);
+                mAccessToken = (ApiAccessToken) args.getSerializable(ARG_ACCESS_TOKEN);
 
                 new OptionsRequest(mUrl, mAccessToken).start();
             }
@@ -153,7 +152,7 @@ public class PostFragment extends ListFragment {
             }
 
             if (savedInstanceState.containsKey(STATE_ACCESS_TOKEN)) {
-                mAccessToken = (Api.AccessToken) savedInstanceState.getSerializable(STATE_ACCESS_TOKEN);
+                mAccessToken = (ApiAccessToken) savedInstanceState.getSerializable(STATE_ACCESS_TOKEN);
             }
 
             if (savedInstanceState.containsKey(STATE_CURRENT_KEY)) {
@@ -213,8 +212,8 @@ public class PostFragment extends ListFragment {
                 .create();
     }
 
-    private class OptionsRequest extends Api.OptionsRequest {
-        OptionsRequest(String url, Api.AccessToken at) {
+    class OptionsRequest extends Api.OptionsRequest {
+        OptionsRequest(String url, ApiAccessToken at) {
             super(url, new Api.Params(at));
         }
 
@@ -226,23 +225,21 @@ public class PostFragment extends ListFragment {
         }
 
         @Override
-        protected void onSuccess(JSONObject response) {
-            if (response.has("POST")) {
-                try {
-                    JSONObject postInfo = response.getJSONObject("POST");
-                    if (postInfo.has("parameters")) {
-                        JSONArray postParams = postInfo.getJSONArray("parameters");
-                        for (int i = 0, l = postParams.length(); i < l; i++) {
-                            JSONObject postParam = postParams.getJSONObject(i);
-                            Row row = new Row();
-                            row.key = postParam.getString("name");
-                            row.type = postParam.getString("type");
-                            mData.add(row);
-                        }
-                    }
-                } catch (JSONException e) {
-                    // ignore
-                }
+        protected void onSuccess(String response) {
+            OptionsResponse data = App.getGsonInstance().fromJson(response, OptionsResponse.class);
+            if (data.POST == null) {
+                return;
+            }
+
+            if (data.POST.parameters == null) {
+                return;
+            }
+
+            for (OptionsResponsePostParam param : data.POST.parameters) {
+                final Row row = new Row();
+                row.key = param.name;
+                row.type = param.type;
+                mData.add(row);
             }
         }
 
@@ -262,8 +259,8 @@ public class PostFragment extends ListFragment {
         }
     }
 
-    private class SubmitRequest extends Api.PostRequest {
-        SubmitRequest(String url, Api.AccessToken at, List<Row> data) {
+    class SubmitRequest extends Api.PostRequest {
+        SubmitRequest(String url, ApiAccessToken at, List<Row> data) {
             super(url, new Api.Params(at).and(data));
 
             for (Row row : data) {
@@ -289,7 +286,7 @@ public class PostFragment extends ListFragment {
         }
 
         @Override
-        protected void onSuccess(JSONObject response) {
+        protected void onSuccess(String response) {
             Toast.makeText(getContext(), R.string.post_success, Toast.LENGTH_LONG).show();
 
             Activity activity = getActivity();
@@ -320,7 +317,7 @@ public class PostFragment extends ListFragment {
         }
     }
 
-    private class DataAdapter extends BaseAdapter {
+    class DataAdapter extends BaseAdapter {
 
         private final LayoutInflater mInflater;
 
@@ -373,8 +370,26 @@ public class PostFragment extends ListFragment {
         }
     }
 
-    private static class ViewHolder {
+    static class ViewHolder {
         TextView text1;
         TextView text2;
+    }
+
+    static class OptionsResponse {
+        @SerializedName("POST")
+        OptionsResponsePost POST;
+    }
+
+    static class OptionsResponsePost {
+        @SerializedName("parameters")
+        OptionsResponsePostParam[] parameters;
+    }
+
+    static class OptionsResponsePostParam {
+        @SerializedName("name")
+        String name;
+
+        @SerializedName("type")
+        String type;
     }
 }

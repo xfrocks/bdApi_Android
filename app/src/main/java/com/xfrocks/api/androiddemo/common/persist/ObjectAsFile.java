@@ -1,4 +1,4 @@
-package com.xfrocks.api.androiddemo.persist;
+package com.xfrocks.api.androiddemo.common.persist;
 
 import android.content.Context;
 

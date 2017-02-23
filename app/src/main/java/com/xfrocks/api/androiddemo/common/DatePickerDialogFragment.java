@@ -12,10 +12,10 @@ import java.util.Calendar;
 
 public class DatePickerDialogFragment extends DialogFragment implements DatePickerDialog.OnDateSetListener {
 
-    static final String ARG_REQUEST_CODE = "request_code";
-    static final String ARG_YEAR = "year";
-    static final String ARG_MONTH = "month";
-    static final String ARG_DAY = "day";
+    private static final String ARG_REQUEST_CODE = "request_code";
+    private static final String ARG_YEAR = "year";
+    private static final String ARG_MONTH = "month";
+    private static final String ARG_DAY = "day";
 
     public static DatePickerDialogFragment newInstance(int requestCode, Integer year, Integer monthFromOne, Integer day) {
         DatePickerDialogFragment fragment = new DatePickerDialogFragment();

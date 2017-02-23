@@ -12,12 +12,11 @@ import android.text.TextUtils;
 import android.util.Log;
 
 import com.google.android.gms.gcm.GcmListenerService;
+import com.google.gson.annotations.SerializedName;
+import com.xfrocks.api.androiddemo.App;
 import com.xfrocks.api.androiddemo.BuildConfig;
 import com.xfrocks.api.androiddemo.MainActivity;
 import com.xfrocks.api.androiddemo.R;
-
-import org.json.JSONException;
-import org.json.JSONObject;
 
 public class ReceiverService extends GcmListenerService {
 
@@ -33,25 +32,14 @@ public class ReceiverService extends GcmListenerService {
                 && !TextUtils.isEmpty(notification)) {
             sendNotification(notificationId, notification);
         } else if (data.containsKey("message")) {
-            String message = data.getString("message");
-            try {
-                JSONObject messageObj = new JSONObject(message);
-
-                int conversationId = messageObj.getInt("conversation_id");
-                int messageId = messageObj.getInt("message_id");
-                String creatorUsername = data.getString("creator_username");
-                String conversationTitle = messageObj.getString("title");
-                String messageBody = messageObj.getString("message");
-                if (conversationId > 0
-                        && messageId > 0
-                        && creatorUsername != null
-                        && conversationTitle != null
-                        && messageBody != null) {
-                    ChatOrNotifReceiver.broadcast(this, conversationId, messageId,
-                            creatorUsername, conversationTitle, messageBody);
-                }
-            } catch (JSONException e) {
-                // ignore
+            NotificationMessage message = App.getGsonInstance().fromJson(data.getString("message"), NotificationMessage.class);
+            if (message.conversationId > 0
+                    && message.messageId > 0
+                    && message.creatorUsername != null
+                    && message.conversationTitle != null
+                    && message.messageBody != null) {
+                ChatOrNotifReceiver.broadcast(this, message.conversationId, message.messageId,
+                        message.creatorUsername, message.conversationTitle, message.messageBody);
             }
         }
     }
@@ -80,4 +68,20 @@ public class ReceiverService extends GcmListenerService {
         notificationManager.notify(0, notificationBuilder.build());
     }
 
+    static class NotificationMessage {
+        @SerializedName("conversation_id")
+        Integer conversationId;
+
+        @SerializedName("message_id")
+        Integer messageId;
+
+        @SerializedName("creator_username")
+        String creatorUsername;
+
+        @SerializedName("title")
+        String conversationTitle;
+
+        @SerializedName("message")
+        String messageBody;
+    }
 }

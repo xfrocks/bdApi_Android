@@ -19,34 +19,34 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.bumptech.glide.Glide;
-import com.xfrocks.api.androiddemo.Api;
-import com.xfrocks.api.androiddemo.LoginActivity;
 import com.xfrocks.api.androiddemo.R;
-
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.xfrocks.api.androiddemo.auth.LoginActivity;
+import com.xfrocks.api.androiddemo.common.Api;
+import com.xfrocks.api.androiddemo.common.model.ApiAccessToken;
+import com.xfrocks.api.androiddemo.common.model.ApiDiscussion;
+import com.xfrocks.api.androiddemo.common.model.ApiDiscussionMessage;
 
 import java.text.Format;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 abstract public class DiscussionListActivity extends AppCompatActivity {
 
     public static final String EXTRA_DISCUSSION_CONTAINER_ID = "container_id";
-    static final String STATE_ACCESS_TOKEN = "accessToken";
-    static final String STATE_DISCUSSION_CONTAINER_ID = "containerId";
+    private static final String STATE_ACCESS_TOKEN = "accessToken";
+    private static final String STATE_DISCUSSION_CONTAINER_ID = "containerId";
 
-    ProgressBar mProgressBar;
-    RecyclerView mDiscussionList;
-    LinearLayoutManager mLayoutManager;
+    private ProgressBar mProgressBar;
+    private LinearLayoutManager mLayoutManager;
 
-    Api.AccessToken mAccessToken;
+    private ApiAccessToken mAccessToken;
     int mDiscussionContainerId;
-    int mPages;
-    int mPage;
+    private int mPages;
+    private int mPage;
 
-    DiscussionsRequest mDiscussionsRequest;
-    DiscussionsAdapter mAdapter;
+    private DiscussionsRequest mDiscussionsRequest;
+    private DiscussionsAdapter mAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,7 +57,7 @@ abstract public class DiscussionListActivity extends AppCompatActivity {
         setSupportActionBar(toolbar);
         mProgressBar = (ProgressBar) findViewById(R.id.progress_bar);
 
-        mDiscussionList = (RecyclerView) findViewById(R.id.discussion_list);
+        RecyclerView mDiscussionList = (RecyclerView) findViewById(R.id.discussion_list);
         mDiscussionList.setHasFixedSize(true);
 
         mLayoutManager = new LinearLayoutManager(this);
@@ -153,7 +153,7 @@ abstract public class DiscussionListActivity extends AppCompatActivity {
 
         if (savedInstanceState.containsKey(STATE_ACCESS_TOKEN)
                 && savedInstanceState.containsKey(STATE_DISCUSSION_CONTAINER_ID)) {
-            mAccessToken = (Api.AccessToken) savedInstanceState.getSerializable(STATE_ACCESS_TOKEN);
+            mAccessToken = (ApiAccessToken) savedInstanceState.getSerializable(STATE_ACCESS_TOKEN);
 
             mDiscussionContainerId = savedInstanceState.getInt(STATE_DISCUSSION_CONTAINER_ID);
         }
@@ -174,23 +174,23 @@ abstract public class DiscussionListActivity extends AppCompatActivity {
         return true;
     }
 
-    void setTheProgressBarVisibility(boolean visible) {
+    private void setTheProgressBarVisibility(boolean visible) {
         if (mProgressBar != null) {
             mProgressBar.setVisibility(visible ? View.VISIBLE : View.GONE);
         }
     }
 
-    String getLoginRedirectToPrefix() {
+    private String getLoginRedirectToPrefix() {
         return getClass().getSimpleName() + "://";
     }
 
-    String getLoginRedirectToFull() {
+    private String getLoginRedirectToFull() {
         return getLoginRedirectToPrefix() + mDiscussionContainerId;
     }
 
-    void updateStatesFromIntent(Intent intent) {
+    private void updateStatesFromIntent(Intent intent) {
         if (intent.hasExtra(DiscussionActivity.EXTRA_ACCESS_TOKEN)) {
-            mAccessToken = (Api.AccessToken) intent.getSerializableExtra(DiscussionActivity.EXTRA_ACCESS_TOKEN);
+            mAccessToken = (ApiAccessToken) intent.getSerializableExtra(DiscussionActivity.EXTRA_ACCESS_TOKEN);
         }
 
         if (intent.hasExtra(EXTRA_DISCUSSION_CONTAINER_ID)) {
@@ -212,19 +212,23 @@ abstract public class DiscussionListActivity extends AppCompatActivity {
 
     abstract String getGetDiscussionsUrl();
 
-    abstract Api.Params getGetDiscussionsParams(int page, Api.AccessToken accessToken);
+    abstract Api.Params getGetDiscussionsParams(int page, ApiAccessToken accessToken);
 
-    abstract void parseResponseForDiscussions(JSONObject response, ParsedDiscussionHandler handler);
+    abstract ParsedDiscussions parseResponseForDiscussions(String response);
 
-    interface ParsedDiscussionHandler {
-        boolean onDiscussion(Api.Discussion discussion);
+    interface ParsedDiscussions {
+        List<? extends ApiDiscussion> getDiscussions();
+
+        Integer getPage();
+
+        Integer getPages();
     }
 
-    class DiscussionsRequest extends Api.GetRequest implements ParsedDiscussionHandler {
+    class DiscussionsRequest extends Api.GetRequest {
 
         final int mRequestPage;
 
-        public DiscussionsRequest(int page) {
+        DiscussionsRequest(int page) {
             super(getGetDiscussionsUrl(), getGetDiscussionsParams(page, mAccessToken));
 
             mRequestPage = page;
@@ -244,23 +248,29 @@ abstract public class DiscussionListActivity extends AppCompatActivity {
         }
 
         @Override
-        protected void onSuccess(JSONObject response) {
+        protected void onSuccess(String response) {
             if (mRequestPage == 1) {
                 mAdapter.clear();
             }
-            DiscussionListActivity.this.mPage = mRequestPage;
+            mPage = mRequestPage;
 
-            parseResponseForDiscussions(response, this);
+            ParsedDiscussions data = parseResponseForDiscussions(response);
 
-            if (mPage == 1) {
-                if (response.has("links")) {
-                    try {
-                        JSONObject links = response.getJSONObject("links");
-                        mPages = links.getInt("pages");
-                    } catch (JSONException e) {
-                        // ignore
-                    }
+            List<? extends ApiDiscussion> discussions = data.getDiscussions();
+            if (discussions != null) {
+                for (ApiDiscussion discussion : discussions) {
+                    mAdapter.addDiscussion(discussion);
                 }
+            }
+
+            Integer page = data.getPage();
+            if (page != null) {
+                mPage = page;
+            }
+
+            Integer pages = data.getPages();
+            if (pages != null) {
+                mPages = pages;
             }
         }
 
@@ -269,17 +279,10 @@ abstract public class DiscussionListActivity extends AppCompatActivity {
             mDiscussionsRequest = null;
             setTheProgressBarVisibility(false);
         }
-
-        @Override
-        public boolean onDiscussion(Api.Discussion discussion) {
-            mAdapter.addDiscussion(discussion);
-
-            return true;
-        }
     }
 
     class DiscussionsAdapter extends RecyclerView.Adapter<ViewHolder> {
-        final ArrayList<Api.Discussion> mData = new ArrayList<>();
+        final ArrayList<ApiDiscussion> mData = new ArrayList<>();
         final Format mTimeFormat;
 
         DiscussionsAdapter(Context context) {
@@ -297,7 +300,7 @@ abstract public class DiscussionListActivity extends AppCompatActivity {
 
         @Override
         public void onBindViewHolder(ViewHolder holder, int position) {
-            Api.Discussion discussion = mData.get(position);
+            ApiDiscussion discussion = mData.get(position);
 
             holder.avatar.setContentDescription(discussion.getCreatorName());
             Glide.with(DiscussionListActivity.this)
@@ -312,7 +315,7 @@ abstract public class DiscussionListActivity extends AppCompatActivity {
                     mTimeFormat.format(new Date(discussion.getCreateDate() * 1000L))));
 
             String firstMessageBodyPlainText = null;
-            Api.DiscussionMessage firstMessage = discussion.getFirstMessage();
+            ApiDiscussionMessage firstMessage = discussion.getFirstMessage();
             if (firstMessage != null) {
                 firstMessageBodyPlainText = firstMessage.getBodyPlainText();
             }
@@ -331,7 +334,7 @@ abstract public class DiscussionListActivity extends AppCompatActivity {
 
         void onViewClick(ViewHolder vh) {
             int position = vh.getAdapterPosition();
-            Api.Discussion discussion = mData.get(position);
+            ApiDiscussion discussion = mData.get(position);
             if (discussion == null) {
                 return;
             }
@@ -348,7 +351,7 @@ abstract public class DiscussionListActivity extends AppCompatActivity {
             notifyDataSetChanged();
         }
 
-        void addDiscussion(Api.Discussion discussion) {
+        void addDiscussion(ApiDiscussion discussion) {
             mData.add(discussion);
             notifyItemInserted(mData.size() - 1);
         }
@@ -360,7 +363,7 @@ abstract public class DiscussionListActivity extends AppCompatActivity {
         final TextView info;
         final TextView message;
 
-        public ViewHolder(View v, final DiscussionsAdapter adapter) {
+        ViewHolder(View v, final DiscussionsAdapter adapter) {
             super(v);
 
             avatar = (ImageView) v.findViewById(R.id.avatar);
