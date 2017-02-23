@@ -1,34 +1,32 @@
 package com.xfrocks.api.androiddemo;
 
-import android.app.DatePickerDialog;
-import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
 import android.support.design.widget.TabLayout;
-import android.support.v4.app.DialogFragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
-import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.Toast;
+
+import com.xfrocks.api.androiddemo.common.DatePickerDialogFragment;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.Calendar;
 import java.util.Locale;
 
 public class RegisterActivity extends AppCompatActivity
-        implements TfaDialogFragment.TfaDialogListener {
+        implements TfaDialogFragment.TfaDialogListener,
+        DatePickerDialogFragment.Listener {
 
     public static final String EXTRA_USER = "user";
     public static final String RESULT_EXTRA_ACCESS_TOKEN = "access_token";
+    static final int DATE_PICKER_RC_DOB = 1;
 
     private EditText mEmailView;
     private EditText mUsernameView;
@@ -318,34 +316,8 @@ public class RegisterActivity extends AppCompatActivity
     }
 
     private void showDatePicker() {
-        DialogFragment newFragment = new DialogFragment() {
-            @NonNull
-            @Override
-            public Dialog onCreateDialog(Bundle savedInstanceState) {
-                final Calendar c = Calendar.getInstance();
-                int year = c.get(Calendar.YEAR);
-                int month = c.get(Calendar.MONTH);
-                int day = c.get(Calendar.DAY_OF_MONTH);
-
-                if (mDobYear != null
-                        && mDobMonth != null
-                        && mDobDay != null) {
-                    year = mDobYear;
-                    month = mDobMonth - 1;
-                    day = mDobDay;
-                }
-
-                // Create a new instance of DatePickerDialog and return it
-                return new DatePickerDialog(getActivity(), new DatePickerDialog.OnDateSetListener() {
-                    @Override
-                    public void onDateSet(DatePicker datePicker, int year, int month, int day) {
-                        setDate(year, month + 1, day);
-                        mDobView.selectAll();
-                    }
-                }, year, month, day);
-            }
-        };
-        newFragment.show(getSupportFragmentManager(), "DatePickerDialog");
+        DatePickerDialogFragment dpdf = DatePickerDialogFragment.newInstance(DATE_PICKER_RC_DOB, mDobYear, mDobMonth, mDobDay);
+        dpdf.show(getSupportFragmentManager(), "DatePickerDialog");
     }
 
     private void setDate(int year, int month, int day) {
@@ -356,11 +328,17 @@ public class RegisterActivity extends AppCompatActivity
         mDobView.setText(String.format(Locale.US, "%04d-%02d-%02d", year, month, day));
     }
 
-    private class RegisterRequest extends Api.PostRequest {
-        public RegisterRequest(String username,
-                               String email,
-                               String password,
-                               int dobYear, int dobMonth, int dobDay) {
+    @Override
+    public void onDatePickerDialogFragmentNewDate(int year, int monthFromOne, int day) {
+        setDate(year, monthFromOne, day);
+        mDobView.selectAll();
+    }
+
+    class RegisterRequest extends Api.PostRequest {
+        RegisterRequest(String username,
+                        String email,
+                        String password,
+                        int dobYear, int dobMonth, int dobDay) {
             super(Api.URL_USERS, new Api.Params(Api.URL_USERS_PARAM_USERNAME, username)
                     .and(Api.URL_USERS_PARAM_EMAIL, email)
                     .and(Api.URL_USERS_PARAM_PASSWORD, password)
@@ -410,8 +388,8 @@ public class RegisterActivity extends AppCompatActivity
         }
     }
 
-    private class AssociateRequest extends Api.PostRequest {
-        public AssociateRequest(int userId, String password, String tfaProviderId, String tfaProviderCode) {
+    class AssociateRequest extends Api.PostRequest {
+        AssociateRequest(int userId, String password, String tfaProviderId, String tfaProviderCode) {
             super(Api.URL_OAUTH_TOKEN_ASSOCIATE, new Api.Params(Api.URL_USERS_PARAM_USER_ID, userId)
                     .and(Api.URL_USERS_PARAM_PASSWORD, password)
                     .and(Api.URL_USERS_PARAM_EXTRA_DATA, mExtraData)

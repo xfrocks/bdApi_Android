@@ -1,7 +1,5 @@
 package com.xfrocks.api.androiddemo.discussion;
 
-import android.os.Bundle;
-
 import com.xfrocks.api.androiddemo.Api;
 
 import org.json.JSONArray;
