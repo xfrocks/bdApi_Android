@@ -11,7 +11,7 @@ android {
 
         minSdkVersion 21
         targetSdkVersion 25
-        versionCode 8
+        versionCode 9
         versionName "1.0.0"
 
         // oops, too many dependencies apparently?
