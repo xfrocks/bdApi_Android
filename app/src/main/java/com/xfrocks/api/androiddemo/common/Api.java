@@ -390,6 +390,7 @@ public class Api {
             }
 
             if (mBuiltBody == null) {
+                // TODO: drop org.apache.http dependency
                 mBodyBuilder = MultipartEntityBuilder.create();
                 mBodyBuilder.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
 
