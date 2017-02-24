@@ -565,6 +565,8 @@ abstract public class DiscussionActivity extends AppCompatActivity implements Qu
             }
 
             if (messagePrev == null
+                    || !messagePrev.isComplete()
+                    || !message.isComplete()
                     || !message.getCreatorUserId().equals(messagePrev.getCreatorUserId())
                     || messagePrev.getCreateDate() > message.getCreateDate() + 300) {
                 holder.info.setVisibility(View.VISIBLE);
