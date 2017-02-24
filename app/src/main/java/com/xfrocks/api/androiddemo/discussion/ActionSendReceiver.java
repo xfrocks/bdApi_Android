@@ -25,7 +25,7 @@ public class ActionSendReceiver extends AppCompatActivity implements QuickReplyF
     private static final String QUERY_PARAM_ACTION = "action";
     private static final String QUERY_PARAM_TYPE = "type";
     private static final String QUERY_PARAM_STREAM = "stream";
-    static final String STATE_UPLOADED_STREAM = "uploadedStream";
+    private static final String STATE_UPLOADED_STREAM = "uploadedStream";
 
     private LinearLayout mInner;
     private QuickReplyFragment mQuickReply;

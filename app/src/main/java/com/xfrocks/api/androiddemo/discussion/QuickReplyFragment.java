@@ -4,6 +4,7 @@ import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
@@ -39,12 +40,14 @@ import net.gotev.uploadservice.MultipartUploadRequest;
 import net.gotev.uploadservice.ServerResponse;
 import net.gotev.uploadservice.UploadInfo;
 import net.gotev.uploadservice.UploadNotificationConfig;
-import net.gotev.uploadservice.UploadStatusDelegate;
+import net.gotev.uploadservice.UploadService;
+import net.gotev.uploadservice.UploadServiceBroadcastReceiver;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.Serializable;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.UUID;
@@ -66,6 +69,7 @@ public class QuickReplyFragment extends Fragment {
     private ApiDiscussion mDiscussion;
     private Listener mListener;
 
+    private Receiver mReceiver;
     private AndroidPermissions mUploadPermissions;
     private AttachmentsAdapter mPendingAttachmentsAdapter;
     private String mPendingMessage;
@@ -74,6 +78,7 @@ public class QuickReplyFragment extends Fragment {
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        mReceiver = new Receiver();
         mUploadPermissions = new AndroidPermissions(getContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE);
         mPendingAttachmentsAdapter = new AttachmentsAdapter();
     }
@@ -134,6 +139,20 @@ public class QuickReplyFragment extends Fragment {
                 attemptReply();
             }
         });
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+
+        getActivity().registerReceiver(mReceiver, new IntentFilter(UploadService.NAMESPACE + ".uploadservice.broadcast.status"));
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+
+        getActivity().unregisterReceiver(mReceiver);
     }
 
     @Override
@@ -296,7 +315,7 @@ public class QuickReplyFragment extends Fragment {
         startActivityForResult(cameraIntents[0], RC_PICK_FILE);
     }
 
-    private void attemptResize(final Uri uri, int size) {
+    private void attemptResize(final String attachmentUuid, final Uri uri, int size) {
         Glide.with(getActivity().getApplicationContext())
                 .load(uri)
                 .asBitmap()
@@ -305,12 +324,12 @@ public class QuickReplyFragment extends Fragment {
                 .into(new SimpleTarget<Bitmap>() {
                     @Override
                     public void onResourceReady(Bitmap resource, GlideAnimation<? super Bitmap> glideAnimation) {
-                        onImageResized(uri, resource);
+                        onImageResized(attachmentUuid, uri, resource);
                     }
                 });
     }
 
-    private void onImageResized(Uri uri, Bitmap resource) {
+    private void onImageResized(String attachmentUuid, Uri uri, Bitmap resource) {
         String fileName = ChooserIntent.getFileNameFromUri(getContext(), uri);
         String prefix = fileName;
         String suffix = null;
@@ -341,19 +360,23 @@ public class QuickReplyFragment extends Fragment {
             return;
         }
 
-        uploadAttach(outputFile.getPath(), fileName);
+        uploadAttach(attachmentUuid, outputFile.getPath(), fileName);
     }
 
     void uploadAttach(Uri uri) {
         int size = App.getFeatureAttachmentResize();
+
+        Attachment attachment = new Attachment();
+        mPendingAttachmentsAdapter.addAndNotify(attachment);
+
         if (size > 0) {
-            attemptResize(uri, size);
+            attemptResize(attachment.uuid, uri, size);
         } else {
-            uploadAttach(uri.getPath(), null);
+            uploadAttach(attachment.uuid, uri.getPath(), null);
         }
     }
 
-    private void uploadAttach(String path, String fileName) {
+    private void uploadAttach(String attachmentUuid, String path, String fileName) {
         ApiAccessToken accessToken = null;
         if (mListener != null) {
             accessToken = mListener.getEffectiveAccessToken();
@@ -376,50 +399,10 @@ public class QuickReplyFragment extends Fragment {
                     .addFileToUpload(path, ApiConstants.PARAM_FILE, fileName)
                     .setUtf8Charset()
                     .setMaxRetries(2)
-                    .setDelegate(new UploadStatusDelegate() {
-                        @Override
-                        public void onProgress(Context context, UploadInfo uploadInfo) {
-                            if (isDetached()) {
-                                return;
-                            }
-
-                            onAttachProgress(uploadInfo);
-                        }
-
-                        @Override
-                        public void onError(Context context, UploadInfo uploadInfo, Exception exception) {
-                            if (isDetached()) {
-                                return;
-                            }
-
-                            onAttachFailed(uploadInfo);
-                        }
-
-                        @Override
-                        public void onCompleted(Context context, UploadInfo uploadInfo, ServerResponse serverResponse) {
-                            if (isDetached()) {
-                                return;
-                            }
-
-                            onAttachSuccess(uploadInfo);
-                        }
-
-                        @Override
-                        public void onCancelled(Context context, UploadInfo uploadInfo) {
-                            if (isDetached()) {
-                                return;
-                            }
-
-                            onAttachFailed(uploadInfo);
-                        }
-                    })
                     .setNotificationConfig(new UploadNotificationConfig())
                     .startUpload();
 
-            Attachment attachment = new Attachment();
-            attachment.uri = Uri.fromFile(new File(path));
-            attachment.uploadId = uploadId;
-            mPendingAttachmentsAdapter.addAttachmentAndNotify(attachment);
+            mPendingAttachmentsAdapter.updateAndNotify(attachmentUuid, uploadId, path);
         } catch (MalformedURLException | FileNotFoundException e) {
             e.printStackTrace();
         }
@@ -479,7 +462,14 @@ public class QuickReplyFragment extends Fragment {
         @Override
         public void onBindViewHolder(AttachmentViewHolder holder, int position) {
             Attachment attachment = mData.get(position);
-            holder.thumbnail.setImageURI(attachment.uri);
+
+            if (attachment.path != null) {
+                Glide.with(getContext())
+                        .load(attachment.path)
+                        .into(holder.thumbnail);
+            } else {
+                holder.thumbnail.setImageResource(R.drawable.avatar_l);
+            }
 
             holder.thumbnail.setAlpha(.5f + attachment.percent * .005f);
             holder.uploaded.setVisibility(attachment.percent > 99 ? View.VISIBLE : View.GONE);
@@ -490,17 +480,19 @@ public class QuickReplyFragment extends Fragment {
             return mData.size();
         }
 
-        void addAttachmentAndNotify(Attachment attachment) {
+        void addAndNotify(Attachment attachment) {
             mData.add(attachment);
             notifyItemInserted(mData.size() - 1);
         }
 
-        void removeAndNotify(String uploadId) {
-            int foundIndex = indexOfUploadId(uploadId);
+        void updateAndNotify(String uuid, String uploadId, String path) {
+            int foundIndex = indexOfUuid(uuid);
 
             if (foundIndex > -1) {
-                mData.remove(foundIndex);
-                notifyItemRemoved(foundIndex);
+                Attachment attachment = mData.get(foundIndex);
+                attachment.uploadId = uploadId;
+                attachment.path = path;
+                notifyItemChanged(foundIndex);
             }
         }
 
@@ -513,10 +505,28 @@ public class QuickReplyFragment extends Fragment {
             }
         }
 
+        void removeAndNotify(String uploadId) {
+            int foundIndex = indexOfUploadId(uploadId);
+
+            if (foundIndex > -1) {
+                mData.remove(foundIndex);
+                notifyItemRemoved(foundIndex);
+            }
+        }
+
         void clearAndNotify() {
             mData.clear();
-            generateAttachmentHash();
             notifyDataSetChanged();
+        }
+
+        int indexOfUuid(String uuid) {
+            for (int i = 0; i < mData.size(); i++) {
+                if (uuid.equals(mData.get(i).uuid)) {
+                    return i;
+                }
+            }
+
+            return -1;
         }
 
         int indexOfUploadId(String uploadId) {
@@ -534,13 +544,56 @@ public class QuickReplyFragment extends Fragment {
         }
     }
 
-    class Attachment {
-        Uri uri;
-        String uploadId;
-        int percent;
+    class Receiver extends UploadServiceBroadcastReceiver {
+        @Override
+        public void onProgress(Context context, UploadInfo uploadInfo) {
+            if (isDetached()) {
+                return;
+            }
+
+            onAttachProgress(uploadInfo);
+        }
+
+        @Override
+        public void onError(Context context, UploadInfo uploadInfo, Exception exception) {
+            if (isDetached()) {
+                return;
+            }
+
+            onAttachFailed(uploadInfo);
+        }
+
+        @Override
+        public void onCompleted(Context context, UploadInfo uploadInfo, ServerResponse serverResponse) {
+            if (isDetached()) {
+                return;
+            }
+
+            onAttachSuccess(uploadInfo);
+        }
+
+        @Override
+        public void onCancelled(Context context, UploadInfo uploadInfo) {
+            if (isDetached()) {
+                return;
+            }
+
+            onAttachFailed(uploadInfo);
+        }
     }
 
-    class AttachmentViewHolder extends RecyclerView.ViewHolder {
+    static class Attachment implements Serializable {
+        final String uuid;
+        String uploadId;
+        String path;
+        int percent;
+
+        Attachment() {
+            uuid = UUID.randomUUID().toString();
+        }
+    }
+
+    static class AttachmentViewHolder extends RecyclerView.ViewHolder {
         final ImageView thumbnail;
         final ImageView uploaded;
 
