@@ -9,9 +9,11 @@ import android.content.pm.ResolveInfo;
 import android.database.Cursor;
 import android.net.Uri;
 import android.provider.MediaStore;
+import android.support.v4.content.FileProvider;
 
-import com.xfrocks.api.androiddemo.App;
+import com.xfrocks.api.androiddemo.BuildConfig;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -38,7 +40,9 @@ public class ChooserIntent {
             final Intent intent = new Intent(captureIntent);
             intent.setComponent(new ComponentName(res.activityInfo.packageName, res.activityInfo.name));
             intent.setPackage(res.activityInfo.packageName);
-            intent.putExtra(MediaStore.EXTRA_OUTPUT, App.getTempForCamera(context));
+            intent.putExtra(MediaStore.EXTRA_OUTPUT, getFileProviderUri(context, getCameraFile(context)));
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
             cameraIntents.add(intent);
         }
 
@@ -51,7 +55,7 @@ public class ChooserIntent {
             uri = data.getData();
         }
         if (uri == null) {
-            uri = App.getTempForCamera(context);
+            uri = Uri.fromFile(getCameraFile(context));
         }
 
         return uri;
@@ -85,5 +89,15 @@ public class ChooserIntent {
         }
 
         return "file.bin";
+    }
+
+    private static File getCameraFile(Context context) {
+        return new File(context.getExternalCacheDir(), "camera.jpg");
+    }
+
+    private static Uri getFileProviderUri(Context context, File file) {
+        // https://developer.android.com/training/camera/photobasics.html
+        String authority = BuildConfig.APPLICATION_ID + ".file_provider";
+        return FileProvider.getUriForFile(context, authority, file);
     }
 }

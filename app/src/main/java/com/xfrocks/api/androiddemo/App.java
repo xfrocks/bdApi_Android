@@ -1,7 +1,5 @@
 package com.xfrocks.api.androiddemo;
 
-import android.content.Context;
-import android.net.Uri;
 import android.support.multidex.MultiDexApplication;
 import android.text.TextUtils;
 
@@ -16,8 +14,6 @@ import com.xfrocks.api.androiddemo.common.model.ApiAccessToken;
 
 import net.gotev.uploadservice.Logger;
 import net.gotev.uploadservice.UploadService;
-
-import java.io.File;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
@@ -76,10 +72,6 @@ public class App extends MultiDexApplication {
 
     public synchronized static App getInstance() {
         return sInstance;
-    }
-
-    public static Uri getTempForCamera(Context context) {
-        return Uri.fromFile(new File(context.getExternalCacheDir(), "camera.jpg"));
     }
 
     public static boolean getFeatureConfirmSignInWithRemember() {

@@ -305,7 +305,7 @@ public class QuickReplyFragment extends Fragment {
             suffix = "jpg";
         }
 
-        File outputDir = getContext().getCacheDir();
+        File outputDir = getContext().getExternalCacheDir();
         File outputFile;
         try {
             outputFile = File.createTempFile(prefix, "." + suffix, outputDir);
@@ -318,7 +318,7 @@ public class QuickReplyFragment extends Fragment {
             return;
         }
 
-        uploadAttach(uri, outputFile.getPath(), fileName);
+        uploadAttach(outputFile.getPath(), fileName);
     }
 
     void uploadAttach(Uri uri) {
@@ -326,11 +326,11 @@ public class QuickReplyFragment extends Fragment {
         if (size > 0) {
             attemptResize(uri, size);
         } else {
-            uploadAttach(uri, uri.getPath(), null);
+            uploadAttach(uri.getPath(), null);
         }
     }
 
-    private void uploadAttach(Uri uri, String path, String fileName) {
+    private void uploadAttach(String path, String fileName) {
         ApiAccessToken accessToken = null;
         if (mListener != null) {
             accessToken = mListener.getEffectiveAccessToken();
@@ -395,7 +395,7 @@ public class QuickReplyFragment extends Fragment {
                     .startUpload();
 
             Attachment attachment = new Attachment();
-            attachment.uri = uri;
+            attachment.uri = Uri.fromFile(new File(path));
             attachment.uploadId = uploadId;
             mPendingAttachments.addAttachmentAndNotify(attachment);
         } catch (MalformedURLException | FileNotFoundException e) {
