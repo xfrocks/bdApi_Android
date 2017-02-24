@@ -2,7 +2,7 @@ package com.xfrocks.api.androiddemo.common;
 
 import java.lang.reflect.Array;
 
-public class ArrayUtils {
+class ArrayUtils {
     public static <T> T[] concat(T[] first, T[] second, Class<T> type) {
         int len1 = first.length;
         int len2 = second.length;

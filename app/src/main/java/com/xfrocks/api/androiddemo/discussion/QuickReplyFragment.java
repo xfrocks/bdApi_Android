@@ -1,11 +1,13 @@
 package com.xfrocks.api.androiddemo.discussion;
 
+import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.LinearLayoutManager;
@@ -27,6 +29,7 @@ import com.bumptech.glide.request.animation.GlideAnimation;
 import com.bumptech.glide.request.target.SimpleTarget;
 import com.xfrocks.api.androiddemo.App;
 import com.xfrocks.api.androiddemo.R;
+import com.xfrocks.api.androiddemo.common.AndroidPermissions;
 import com.xfrocks.api.androiddemo.common.ApiConstants;
 import com.xfrocks.api.androiddemo.common.ChooserIntent;
 import com.xfrocks.api.androiddemo.common.model.ApiAccessToken;
@@ -48,6 +51,8 @@ import java.util.ArrayList;
 public class QuickReplyFragment extends Fragment {
 
     private static final int RC_PICK_FILE = 1;
+    private static final int RC_ATTEMPT_ATTACH = 2;
+    private static final int RC_ATTEMPT_CAMERA = 3;
 
     private LinearLayout mExtra;
     private ImageButton mAttach;
@@ -58,8 +63,16 @@ public class QuickReplyFragment extends Fragment {
     private ApiDiscussion mDiscussion;
     private Listener mListener;
 
+    private AndroidPermissions mUploadPermissions;
     private AttachmentsAdapter mPendingAttachments;
     private String mPendingMessage;
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        mUploadPermissions = new AndroidPermissions(getContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE);
+    }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -132,6 +145,24 @@ public class QuickReplyFragment extends Fragment {
                     if (uri != null && mListener != null) {
                         uploadAttach(uri);
                     }
+                }
+                break;
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        switch (requestCode) {
+            case RC_ATTEMPT_ATTACH:
+                if (mUploadPermissions.areAllRequiredPermissionsGranted(permissions, grantResults)) {
+                    attemptAttachStep2();
+                }
+                break;
+            case RC_ATTEMPT_CAMERA:
+                if (mUploadPermissions.areAllRequiredPermissionsGranted(permissions, grantResults)) {
+                    attemptCameraStep2();
                 }
                 break;
         }
@@ -210,11 +241,29 @@ public class QuickReplyFragment extends Fragment {
     }
 
     private void attemptAttach() {
+        if (mUploadPermissions.needRequesting()) {
+            mUploadPermissions.requestPermissions(this, RC_ATTEMPT_ATTACH);
+            return;
+        }
+
+        attemptAttachStep2();
+    }
+
+    private void attemptAttachStep2() {
         Intent chooserIntent = ChooserIntent.create(getContext(), R.string.pick_file_to_attach, "*/*");
         startActivityForResult(chooserIntent, RC_PICK_FILE);
     }
 
     private void attemptCamera() {
+        if (mUploadPermissions.needRequesting()) {
+            mUploadPermissions.requestPermissions(this, RC_ATTEMPT_CAMERA);
+            return;
+        }
+
+        attemptCameraStep2();
+    }
+
+    private void attemptCameraStep2() {
         Intent[] cameraIntents = ChooserIntent.buildCameraIntents(getContext());
         if (cameraIntents.length == 0) {
             // TODO: device without camera?
