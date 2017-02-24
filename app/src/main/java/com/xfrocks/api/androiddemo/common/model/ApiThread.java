@@ -84,11 +84,16 @@ public class ApiThread extends ApiDiscussion {
 
     @Override
     public Api.Params getGetMessagesParams(int page, ApiAccessToken accessToken) {
+        String fieldsInclude = null;
+        if (page < 2) {
+            fieldsInclude = "thread";
+        }
+
         return new Api.Params(accessToken)
                 .and(ApiConstants.URL_POSTS_PARAM_THREAD_ID, getId())
                 .and(ApiConstants.PARAM_PAGE, page)
                 .and(ApiConstants.PARAM_ORDER, ApiConstants.URL_POSTS_ORDER_REVERSE)
-                .andIf(page > 1, "fields_exclude", "thread");
+                .andFieldsInclude(ApiPost.class, fieldsInclude);
     }
 
     @Override
@@ -110,6 +115,6 @@ public class ApiThread extends ApiDiscussion {
                 .and(ApiConstants.URL_POSTS_PARAM_THREAD_ID, getId())
                 .and(ApiConstants.URL_POSTS_PARAM_POST_BODY, bodyPlainText)
                 .and(ApiConstants.URL_POSTS_PARAM_ATTACHMENT_HASH, attachmentHash)
-                .and("fields_include", "post_id");
+                .and(ApiConstants.PARAM_FIELDS_INCLUDE, "post_id");
     }
 }

@@ -82,11 +82,16 @@ public class ApiConversation extends ApiDiscussion {
 
     @Override
     public Api.Params getGetMessagesParams(int page, ApiAccessToken accessToken) {
+        String fieldsInclude = null;
+        if (page < 2) {
+            fieldsInclude = "conversation";
+        }
+
         return new Api.Params(accessToken)
                 .and(ApiConstants.URL_CONVERSATION_MESSAGES_PARAM_CONVERSATION_ID, getId())
                 .and(ApiConstants.PARAM_PAGE, page)
                 .and(ApiConstants.PARAM_ORDER, ApiConstants.URL_CONVERSATION_MESSAGES_ORDER_REVERSE)
-                .andIf(page > 1, "fields_exclude", "conversation");
+                .andFieldsInclude(ApiConversationMessage.class, fieldsInclude);
     }
 
     @Override
@@ -105,6 +110,6 @@ public class ApiConversation extends ApiDiscussion {
                 .and(ApiConstants.URL_CONVERSATION_MESSAGES_PARAM_CONVERSATION_ID, getId())
                 .and(ApiConstants.URL_CONVERSATION_MESSAGES_PARAM_MESSAGE_BODY, bodyPlainText)
                 .and(ApiConstants.URL_CONVERSATION_MESSAGES_PARAM_ATTACHMENT_HASH, attachmentHash)
-                .and("fields_include", "message_id");
+                .and(ApiConstants.PARAM_FIELDS_INCLUDE, "message_id");
     }
 }

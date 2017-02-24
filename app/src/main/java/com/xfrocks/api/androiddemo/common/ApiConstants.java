@@ -7,6 +7,7 @@ public class ApiConstants {
     public static final String PARAM_FILE = "file";
     public static final String PARAM_PAGE = "page";
     public static final String PARAM_ORDER = "order";
+    public static final String PARAM_FIELDS_INCLUDE = "fields_include";
 
     public static final String URL_OAUTH_TOKEN = "oauth/token";
     public static final String URL_OAUTH_TOKEN_FACEBOOK = "oauth/token/facebook";

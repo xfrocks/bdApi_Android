@@ -2,13 +2,10 @@ package com.xfrocks.api.androiddemo.common.model;
 
 import com.google.gson.annotations.SerializedName;
 
-import java.util.Iterator;
-import java.util.List;
-
 abstract public class ApiDiscussionMessage extends ApiModel {
 
     @SerializedName("attachments")
-    private List<ApiAttachment> mAttachments;
+    private ApiAttachment[] mAttachments;
 
     abstract public Integer getCreatorUserId();
 
@@ -20,11 +17,11 @@ abstract public class ApiDiscussionMessage extends ApiModel {
 
     abstract public String getBodyPlainText();
 
-    public Iterator<ApiAttachment> getAttachmentsIterator() {
+    public ApiAttachment[] getAttachments() {
         if (mAttachments == null) {
-            return null;
+            return new ApiAttachment[0];
         }
 
-        return mAttachments.iterator();
+        return mAttachments;
     }
 }

@@ -9,9 +9,11 @@ import com.android.volley.NetworkResponse;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.HttpHeaderParser;
+import com.google.gson.annotations.SerializedName;
 import com.xfrocks.api.androiddemo.App;
 import com.xfrocks.api.androiddemo.BuildConfig;
 import com.xfrocks.api.androiddemo.common.model.ApiAccessToken;
+import com.xfrocks.api.androiddemo.common.model.ApiModel;
 import com.xfrocks.api.androiddemo.common.persist.Row;
 
 import org.apache.http.HttpEntity;
@@ -26,6 +28,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Field;
 import java.net.URLEncoder;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -488,6 +491,49 @@ public class Api {
             put("client_secret", BuildConfig.CLIENT_SECRET);
 
             return this;
+        }
+
+        public Params andFieldsInclude(Class<? extends ApiModel> clazz, String initialValue) {
+            StringBuilder valueBuilder = new StringBuilder();
+            if (!TextUtils.isEmpty(initialValue)) {
+                valueBuilder.append(initialValue);
+            }
+
+            return andFieldsInclude(clazz, valueBuilder, null);
+        }
+
+        Params andFieldsInclude(Class<? extends ApiModel> clazz, StringBuilder valueBuilder, String prefix) {
+            Field[] fields = ReflectionUtils.getFieldsUpTo(clazz, null);
+            for (Field field : fields) {
+                SerializedName sn = field.getAnnotation(SerializedName.class);
+                if (sn != null) {
+                    String serializedName = sn.value();
+
+                    Class fieldType = field.getType();
+                    if (fieldType.isArray()) {
+                        fieldType = fieldType.getComponentType();
+                    }
+
+                    if (ApiModel.class.isAssignableFrom(fieldType)) {
+                        //noinspection unchecked
+                        andFieldsInclude((Class<? extends ApiModel>) fieldType, valueBuilder, serializedName);
+                        continue;
+                    }
+
+                    if (valueBuilder.length() > 0) {
+                        valueBuilder.append(',');
+                    }
+
+                    if (!TextUtils.isEmpty(prefix)) {
+                        valueBuilder.append(prefix);
+                        valueBuilder.append('.');
+                    }
+
+                    valueBuilder.append(serializedName);
+                }
+            }
+
+            return and(ApiConstants.PARAM_FIELDS_INCLUDE, valueBuilder.toString());
         }
 
         private void put(String key, Object value) {

@@ -34,10 +34,15 @@ public class ForumActivity extends DiscussionListActivity {
 
     @Override
     Api.Params getGetDiscussionsParams(int page, ApiAccessToken accessToken) {
+        String fieldsInclude = null;
+        if (page < 2) {
+            fieldsInclude = "forum";
+        }
+
         return new Api.Params(accessToken)
                 .and(ApiConstants.PARAM_PAGE, page)
                 .and(ApiConstants.URL_THREADS_PARAM_FORUM_ID, mDiscussionContainerId)
-                .andIf(page > 1, "fields_exclude", "forum");
+                .andFieldsInclude(ApiThread.class, fieldsInclude);
     }
 
     @Override

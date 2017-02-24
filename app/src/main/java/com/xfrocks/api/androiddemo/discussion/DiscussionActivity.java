@@ -41,7 +41,6 @@ import com.xfrocks.api.androiddemo.common.persist.ObjectAsFile;
 import java.text.Format;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.Iterator;
 import java.util.List;
 
 abstract public class DiscussionActivity extends AppCompatActivity implements QuickReplyFragment.Listener, ApiUsersMeRequest.Listener {
@@ -579,9 +578,7 @@ abstract public class DiscussionActivity extends AppCompatActivity implements Qu
 
             holder.attachments.removeAllViews();
             boolean hasAttachments = false;
-            Iterator<ApiAttachment> attachmentsIterator = message.getAttachmentsIterator();
-            while (attachmentsIterator != null && attachmentsIterator.hasNext()) {
-                final ApiAttachment attachment = attachmentsIterator.next();
+            for (final ApiAttachment attachment: message.getAttachments()) {
                 ImageView attachmentImageView = new AppCompatImageView(DiscussionActivity.this);
 
                 int thumbnailSize = getResources().getDimensionPixelSize(R.dimen.attachment_thumbnail_size);
