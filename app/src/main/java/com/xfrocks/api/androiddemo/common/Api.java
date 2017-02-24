@@ -515,8 +515,13 @@ public class Api {
                     }
 
                     if (ApiModel.class.isAssignableFrom(fieldType)) {
+                        String fieldPrefix = serializedName;
+                        if (!TextUtils.isEmpty(prefix)) {
+                            fieldPrefix = String.format("%s.%s", prefix, fieldPrefix);
+                        }
+
                         //noinspection unchecked
-                        andFieldsInclude((Class<? extends ApiModel>) fieldType, valueBuilder, serializedName);
+                        andFieldsInclude((Class<? extends ApiModel>) fieldType, valueBuilder, fieldPrefix);
                         continue;
                     }
 
