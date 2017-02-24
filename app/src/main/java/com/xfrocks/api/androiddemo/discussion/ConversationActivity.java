@@ -50,7 +50,7 @@ public class ConversationActivity extends DiscussionActivity {
                 }
 
                 int messageId = ChatOrNotifReceiver.getMessageId(intent);
-                ApiDiscussionMessage latestMessage = mAdapter.getMessageAt0();
+                ApiDiscussionMessage latestMessage = mMessagesAdapter.getMessageAt0();
                 if (latestMessage != null
                         && latestMessage.getId() > messageId) {
                     // this notification appeared to arrive a little too late

@@ -47,12 +47,15 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
+import java.util.UUID;
 
 public class QuickReplyFragment extends Fragment {
 
     private static final int RC_PICK_FILE = 1;
     private static final int RC_ATTEMPT_ATTACH = 2;
     private static final int RC_ATTEMPT_CAMERA = 3;
+    private static final String STATE_PENDING_ATTACHMENTS = "pendingAttachments";
+    private static final String STATE_ATTACHMENT_HASH = "attachmentHash";
 
     private LinearLayout mExtra;
     private ImageButton mAttach;
@@ -64,7 +67,7 @@ public class QuickReplyFragment extends Fragment {
     private Listener mListener;
 
     private AndroidPermissions mUploadPermissions;
-    private AttachmentsAdapter mPendingAttachments;
+    private AttachmentsAdapter mPendingAttachmentsAdapter;
     private String mPendingMessage;
 
     @Override
@@ -72,6 +75,7 @@ public class QuickReplyFragment extends Fragment {
         super.onCreate(savedInstanceState);
 
         mUploadPermissions = new AndroidPermissions(getContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE);
+        mPendingAttachmentsAdapter = new AttachmentsAdapter();
     }
 
     @Override
@@ -90,9 +94,7 @@ public class QuickReplyFragment extends Fragment {
         LinearLayoutManager attachmentsLayoutManager = new LinearLayoutManager(getContext());
         attachmentsLayoutManager.setOrientation(LinearLayoutManager.HORIZONTAL);
         attachments.setLayoutManager(attachmentsLayoutManager);
-
-        mPendingAttachments = new AttachmentsAdapter();
-        attachments.setAdapter(mPendingAttachments);
+        attachments.setAdapter(mPendingAttachmentsAdapter);
 
         mAttach = (ImageButton) view.findViewById(R.id.attach);
         mAttach.setOnClickListener(new View.OnClickListener() {
@@ -168,6 +170,31 @@ public class QuickReplyFragment extends Fragment {
         }
     }
 
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+
+        outState.putSerializable(STATE_PENDING_ATTACHMENTS, mPendingAttachmentsAdapter.mData);
+        outState.putString(STATE_ATTACHMENT_HASH, mPendingAttachmentsAdapter.mAttachmentHash);
+    }
+
+    @Override
+    public void onViewStateRestored(@Nullable Bundle savedInstanceState) {
+        super.onViewStateRestored(savedInstanceState);
+
+        if (savedInstanceState != null) {
+            if (savedInstanceState.containsKey(STATE_PENDING_ATTACHMENTS)) {
+                //noinspection unchecked
+                mPendingAttachmentsAdapter.mData = (ArrayList<Attachment>) savedInstanceState.getSerializable(STATE_PENDING_ATTACHMENTS);
+                mPendingAttachmentsAdapter.notifyDataSetChanged();
+            }
+
+            if (savedInstanceState.containsKey(STATE_ATTACHMENT_HASH)) {
+                mPendingAttachmentsAdapter.mAttachmentHash = savedInstanceState.getString(STATE_ATTACHMENT_HASH);
+            }
+        }
+    }
+
     void setup(ApiDiscussion discussion, Listener listener) {
         mDiscussion = discussion;
         mListener = listener;
@@ -203,11 +230,7 @@ public class QuickReplyFragment extends Fragment {
     }
 
     String getAttachmentHash() {
-        if (mDiscussion == null) {
-            return "";
-        }
-
-        return mDiscussion.toString() + mDiscussion.getId();
+        return mPendingAttachmentsAdapter.mAttachmentHash;
     }
 
     String getPendingMessage() {
@@ -229,7 +252,7 @@ public class QuickReplyFragment extends Fragment {
             mAttach.setVisibility(View.VISIBLE);
             mCamera.setVisibility(View.VISIBLE);
 
-            if (mPendingAttachments.getItemCount() > 0) {
+            if (mPendingAttachmentsAdapter.getItemCount() > 0) {
                 visible++;
             }
         } else {
@@ -352,7 +375,6 @@ public class QuickReplyFragment extends Fragment {
             String uploadId = new MultipartUploadRequest(getContext(), serverUrl)
                     .addFileToUpload(path, ApiConstants.PARAM_FILE, fileName)
                     .setUtf8Charset()
-                    .setAutoDeleteFilesAfterSuccessfulUpload(true)
                     .setMaxRetries(2)
                     .setDelegate(new UploadStatusDelegate() {
                         @Override
@@ -397,22 +419,22 @@ public class QuickReplyFragment extends Fragment {
             Attachment attachment = new Attachment();
             attachment.uri = Uri.fromFile(new File(path));
             attachment.uploadId = uploadId;
-            mPendingAttachments.addAttachmentAndNotify(attachment);
+            mPendingAttachmentsAdapter.addAttachmentAndNotify(attachment);
         } catch (MalformedURLException | FileNotFoundException e) {
             e.printStackTrace();
         }
     }
 
     private void onAttachProgress(UploadInfo uploadInfo) {
-        mPendingAttachments.updateAndNotify(uploadInfo.getUploadId(), uploadInfo.getProgressPercent());
+        mPendingAttachmentsAdapter.updateAndNotify(uploadInfo.getUploadId(), uploadInfo.getProgressPercent());
     }
 
     private void onAttachFailed(UploadInfo uploadInfo) {
-        mPendingAttachments.removeAndNotify(uploadInfo.getUploadId());
+        mPendingAttachmentsAdapter.removeAndNotify(uploadInfo.getUploadId());
     }
 
     private void onAttachSuccess(UploadInfo uploadInfo) {
-        mPendingAttachments.updateAndNotify(uploadInfo.getUploadId(), 100);
+        mPendingAttachmentsAdapter.updateAndNotify(uploadInfo.getUploadId(), 100);
     }
 
     void attemptReply() {
@@ -429,7 +451,7 @@ public class QuickReplyFragment extends Fragment {
 
     void clearViews() {
         mMessage.setText("");
-        mPendingAttachments.clearAndNotify();
+        mPendingAttachmentsAdapter.clearAndNotify();
     }
 
     interface Listener {
@@ -440,7 +462,12 @@ public class QuickReplyFragment extends Fragment {
     }
 
     class AttachmentsAdapter extends RecyclerView.Adapter<AttachmentViewHolder> {
-        final ArrayList<Attachment> mAttachments = new ArrayList<>();
+        ArrayList<Attachment> mData = new ArrayList<>();
+        String mAttachmentHash;
+
+        AttachmentsAdapter() {
+            generateAttachmentHash();
+        }
 
         @Override
         public AttachmentViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
@@ -451,7 +478,7 @@ public class QuickReplyFragment extends Fragment {
 
         @Override
         public void onBindViewHolder(AttachmentViewHolder holder, int position) {
-            Attachment attachment = mAttachments.get(position);
+            Attachment attachment = mData.get(position);
             holder.thumbnail.setImageURI(attachment.uri);
 
             holder.thumbnail.setAlpha(.5f + attachment.percent * .005f);
@@ -460,19 +487,19 @@ public class QuickReplyFragment extends Fragment {
 
         @Override
         public int getItemCount() {
-            return mAttachments.size();
+            return mData.size();
         }
 
         void addAttachmentAndNotify(Attachment attachment) {
-            mAttachments.add(attachment);
-            notifyItemInserted(mAttachments.size() - 1);
+            mData.add(attachment);
+            notifyItemInserted(mData.size() - 1);
         }
 
         void removeAndNotify(String uploadId) {
             int foundIndex = indexOfUploadId(uploadId);
 
             if (foundIndex > -1) {
-                mAttachments.remove(foundIndex);
+                mData.remove(foundIndex);
                 notifyItemRemoved(foundIndex);
             }
         }
@@ -481,24 +508,29 @@ public class QuickReplyFragment extends Fragment {
             int foundIndex = indexOfUploadId(uploadId);
 
             if (foundIndex > -1) {
-                mAttachments.get(foundIndex).percent = percent;
+                mData.get(foundIndex).percent = percent;
                 notifyItemChanged(foundIndex);
             }
         }
 
         void clearAndNotify() {
-            mAttachments.clear();
+            mData.clear();
+            generateAttachmentHash();
             notifyDataSetChanged();
         }
 
         int indexOfUploadId(String uploadId) {
-            for (int i = 0; i < mAttachments.size(); i++) {
-                if (uploadId.equals(mAttachments.get(i).uploadId)) {
+            for (int i = 0; i < mData.size(); i++) {
+                if (uploadId.equals(mData.get(i).uploadId)) {
                     return i;
                 }
             }
 
             return -1;
+        }
+
+        void generateAttachmentHash() {
+            mAttachmentHash = UUID.randomUUID().toString();
         }
     }
 

@@ -50,7 +50,9 @@ abstract public class DiscussionActivity extends AppCompatActivity implements Qu
     public static final String EXTRA_DISCUSSION_ID = "discussion_id";
     public static final String EXTRA_LOGIN_REDIRECTED_TO = "redirected_to";
     private static final String STATE_ACCESS_TOKEN = "accessToken";
-    private static final String STATE_DISCUSSION_ID = "discussionId";
+    private static final String STATE_USER = "user";
+    private static final String STATE_DISCUSSION = "discussion";
+    private static final String STATE_MESSAGES = "messages";
 
     private ProgressBar mProgressBar;
     private RecyclerView mMessageList;
@@ -66,7 +68,7 @@ abstract public class DiscussionActivity extends AppCompatActivity implements Qu
 
     private MessagesRequest mMessagesRequest;
     private PatchRequest mPatchRequest;
-    MessagesAdapter mAdapter;
+    MessagesAdapter mMessagesAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -91,7 +93,7 @@ abstract public class DiscussionActivity extends AppCompatActivity implements Qu
                 super.onScrolled(recyclerView, dx, dy);
 
                 if (dy >= 0
-                        || mLayoutManager.findLastCompletelyVisibleItemPosition() <= mAdapter.getItemCount() - 5
+                        || mLayoutManager.findLastCompletelyVisibleItemPosition() <= mMessagesAdapter.getItemCount() - 5
                         || mPage >= mPages
                         || mMessagesRequest != null) {
                     return;
@@ -101,8 +103,8 @@ abstract public class DiscussionActivity extends AppCompatActivity implements Qu
             }
         });
 
-        mAdapter = new MessagesAdapter(this);
-        mMessageList.setAdapter(mAdapter);
+        mMessagesAdapter = new MessagesAdapter(this);
+        mMessageList.setAdapter(mMessagesAdapter);
 
         mQuickReply = (QuickReplyFragment) getSupportFragmentManager().findFragmentById(R.id.quick_reply);
     }
@@ -133,7 +135,7 @@ abstract public class DiscussionActivity extends AppCompatActivity implements Qu
                 new ApiUsersMeRequest(this, mAccessToken).start();
             }
 
-            if (mAdapter.getItemCount() == 0) {
+            if (mMessagesAdapter.getItemCount() == 0) {
                 new MessagesRequest(1).start();
             }
         } else {
@@ -177,19 +179,35 @@ abstract public class DiscussionActivity extends AppCompatActivity implements Qu
         super.onSaveInstanceState(outState);
 
         outState.putSerializable(STATE_ACCESS_TOKEN, mAccessToken);
-        outState.putInt(STATE_DISCUSSION_ID, getDiscussionId());
+        outState.putSerializable(STATE_USER, mUser);
+        outState.putSerializable(STATE_DISCUSSION, mDiscussion);
+        outState.putSerializable(STATE_MESSAGES, mMessagesAdapter.mData);
     }
 
     @Override
     protected void onRestoreInstanceState(Bundle savedInstanceState) {
         super.onRestoreInstanceState(savedInstanceState);
 
-        if (savedInstanceState.containsKey(STATE_ACCESS_TOKEN)
-                && savedInstanceState.containsKey(STATE_DISCUSSION_ID)) {
-            mAccessToken = (ApiAccessToken) savedInstanceState.getSerializable(STATE_ACCESS_TOKEN);
+        if (savedInstanceState != null) {
+            if (savedInstanceState.containsKey(STATE_ACCESS_TOKEN)) {
+                mAccessToken = (ApiAccessToken) savedInstanceState.getSerializable(STATE_ACCESS_TOKEN);
+            }
 
-            int discussionId = savedInstanceState.getInt(STATE_DISCUSSION_ID);
-            setDiscussion(discussionId);
+            if (savedInstanceState.containsKey(STATE_USER)) {
+                mUser = (ApiUser) savedInstanceState.getSerializable(STATE_USER);
+            }
+
+            if (savedInstanceState.containsKey(STATE_DISCUSSION)) {
+                ApiDiscussion discussion = (ApiDiscussion) savedInstanceState.getSerializable(STATE_DISCUSSION);
+                setDiscussion(discussion);
+            }
+
+            if (savedInstanceState.containsKey(STATE_MESSAGES)) {
+                //noinspection unchecked
+                mMessagesAdapter.mData = (ArrayList<ApiDiscussionMessage>) savedInstanceState.getSerializable(STATE_MESSAGES);
+                mMessagesAdapter.notifyDataSetChanged();
+                mPage = 0;
+            }
         }
     }
 
@@ -335,7 +353,7 @@ abstract public class DiscussionActivity extends AppCompatActivity implements Qu
         @Override
         protected void onSuccess(String response) {
             if (mRequestPage == 1) {
-                mAdapter.clear();
+                mMessagesAdapter.clear();
             }
             mPage = mRequestPage;
 
@@ -343,7 +361,7 @@ abstract public class DiscussionActivity extends AppCompatActivity implements Qu
             List<? extends ApiDiscussionMessage> messages = data.getMessages();
             if (messages != null) {
                 for (ApiDiscussionMessage message : messages) {
-                    mAdapter.addMessage(message);
+                    mMessagesAdapter.addMessage(message);
                 }
             }
 
@@ -394,11 +412,11 @@ abstract public class DiscussionActivity extends AppCompatActivity implements Qu
         @Override
         protected void onSuccess(String response) {
             mLatestMessage = null;
-            while (mAdapter.getItemCount() > 0) {
-                ApiDiscussionMessage message = mAdapter.getMessageAt0();
+            while (mMessagesAdapter.getItemCount() > 0) {
+                ApiDiscussionMessage message = mMessagesAdapter.getMessageAt0();
 
                 if (message.getId() == null) {
-                    mAdapter.removeMessageAt0();
+                    mMessagesAdapter.removeMessageAt0();
                 } else {
                     mLatestMessage = message;
                     break;
@@ -419,7 +437,7 @@ abstract public class DiscussionActivity extends AppCompatActivity implements Qu
             }
 
             for (int i = mNewMessages.size() - 1; i >= 0; i--) {
-                mAdapter.prependMessage(mNewMessages.get(i));
+                mMessagesAdapter.prependMessage(mNewMessages.get(i));
             }
 
             mMessageList.scrollToPosition(0);
@@ -448,7 +466,7 @@ abstract public class DiscussionActivity extends AppCompatActivity implements Qu
         @Override
         protected void onStart() {
             if (mInTransitMessage != null) {
-                mAdapter.prependMessage(mInTransitMessage);
+                mMessagesAdapter.prependMessage(mInTransitMessage);
                 mMessageList.scrollToPosition(0);
             }
         }
@@ -482,7 +500,7 @@ abstract public class DiscussionActivity extends AppCompatActivity implements Qu
                     .show();
 
             mInTransitMessage.errorMessage = errorMessage;
-            mAdapter.notifyMessageChanged(mInTransitMessage);
+            mMessagesAdapter.notifyMessageChanged(mInTransitMessage);
         }
     }
 
@@ -490,7 +508,7 @@ abstract public class DiscussionActivity extends AppCompatActivity implements Qu
         static final int VIEW_TYPE_MINE = 0;
         static final int VIEW_TYPE_OTHER = 1;
 
-        final ArrayList<ApiDiscussionMessage> mData = new ArrayList<>();
+        ArrayList<ApiDiscussionMessage> mData = new ArrayList<>();
         final Format mTimeFormat;
 
         MessagesAdapter(Context context) {
@@ -578,7 +596,7 @@ abstract public class DiscussionActivity extends AppCompatActivity implements Qu
 
             holder.attachments.removeAllViews();
             boolean hasAttachments = false;
-            for (final ApiAttachment attachment: message.getAttachments()) {
+            for (final ApiAttachment attachment : message.getAttachments()) {
                 ImageView attachmentImageView = new AppCompatImageView(DiscussionActivity.this);
 
                 int thumbnailSize = getResources().getDimensionPixelSize(R.dimen.attachment_thumbnail_size);

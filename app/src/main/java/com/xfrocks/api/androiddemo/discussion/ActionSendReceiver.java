@@ -25,6 +25,7 @@ public class ActionSendReceiver extends AppCompatActivity implements QuickReplyF
     private static final String QUERY_PARAM_ACTION = "action";
     private static final String QUERY_PARAM_TYPE = "type";
     private static final String QUERY_PARAM_STREAM = "stream";
+    static final String STATE_UPLOADED_STREAM = "uploadedStream";
 
     private LinearLayout mInner;
     private QuickReplyFragment mQuickReply;
@@ -32,6 +33,7 @@ public class ActionSendReceiver extends AppCompatActivity implements QuickReplyF
 
     private ApiAccessToken mAccessToken;
     private ApiDiscussion mDiscussion;
+    private String mUploadedStream;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -114,8 +116,22 @@ public class ActionSendReceiver extends AppCompatActivity implements QuickReplyF
         mProgressBar = (ProgressBar) findViewById(R.id.progress_bar);
 
         if (type.startsWith("image/") && stream != null) {
-            mQuickReply.uploadAttach(stream);
+            if (savedInstanceState != null && savedInstanceState.containsKey(STATE_UPLOADED_STREAM)) {
+                mUploadedStream = savedInstanceState.getString(STATE_UPLOADED_STREAM);
+            }
+
+            if (mUploadedStream == null || !mUploadedStream.equals(stream.toString())) {
+                mQuickReply.uploadAttach(stream);
+                mUploadedStream = stream.toString();
+            }
         }
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+
+        outState.putString(STATE_UPLOADED_STREAM, mUploadedStream);
     }
 
     @Override
