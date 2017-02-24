@@ -37,6 +37,12 @@ public class ApiThread extends ApiDiscussion {
     @SerializedName("first_post")
     ApiPost mFirstMessage;
 
+    @SerializedName("links")
+    Links mLinks;
+
+    @SerializedName("permissions")
+    Permissions mPermissions;
+
     @Override
     public Integer getId() {
         return mId;
@@ -54,7 +60,11 @@ public class ApiThread extends ApiDiscussion {
 
     @Override
     public String getCreatorAvatar() {
-        return getLink("first_poster_avatar");
+        if (mLinks == null) {
+            return null;
+        }
+
+        return mLinks.mCreatorAvatar;
     }
 
     @Override
@@ -68,13 +78,40 @@ public class ApiThread extends ApiDiscussion {
     }
 
     @Override
+    public String getPermalink() {
+        if (mLinks == null) {
+            return null;
+        }
+
+        return mLinks.mPermalink;
+    }
+
+    @Override
     public boolean canPostMessage() {
-        return checkPermission("post");
+        if (mPermissions == null) {
+            return false;
+        }
+
+        Boolean permission = mPermissions.mPostMessage;
+        if (permission == null) {
+            return false;
+        }
+
+        return permission;
     }
 
     @Override
     public boolean canUploadAttachment() {
-        return checkPermission("upload_attachment");
+        if (mPermissions == null) {
+            return false;
+        }
+
+        Boolean permission = mPermissions.mUploadAttachment;
+        if (permission == null) {
+            return false;
+        }
+
+        return permission;
     }
 
     @Override
@@ -116,5 +153,23 @@ public class ApiThread extends ApiDiscussion {
                 .and(ApiConstants.URL_POSTS_PARAM_POST_BODY, bodyPlainText)
                 .and(ApiConstants.URL_POSTS_PARAM_ATTACHMENT_HASH, attachmentHash)
                 .and(ApiConstants.PARAM_FIELDS_INCLUDE, "post_id");
+    }
+
+    @SuppressWarnings("unused")
+    static class Links extends ApiModel {
+        @SerializedName("first_poster_avatar")
+        String mCreatorAvatar;
+
+        @SerializedName("permalink")
+        String mPermalink;
+    }
+
+    @SuppressWarnings("unused")
+    static class Permissions extends ApiModel {
+        @SerializedName("post")
+        Boolean mPostMessage;
+
+        @SerializedName("upload_attachment")
+        Boolean mUploadAttachment;
     }
 }

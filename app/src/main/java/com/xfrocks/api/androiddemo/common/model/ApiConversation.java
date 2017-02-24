@@ -35,6 +35,12 @@ public class ApiConversation extends ApiDiscussion {
     @SerializedName("first_message")
     ApiConversationMessage mFirstMessage;
 
+    @SerializedName("links")
+    Links mLinks;
+
+    @SerializedName("permissions")
+    Permissions mPermissions;
+
     @Override
     public Integer getId() {
         return mId;
@@ -66,13 +72,40 @@ public class ApiConversation extends ApiDiscussion {
     }
 
     @Override
+    public String getPermalink() {
+        if (mLinks == null) {
+            return null;
+        }
+
+        return mLinks.mPermalink;
+    }
+
+    @Override
     public boolean canPostMessage() {
-        return checkPermission("reply");
+        if (mPermissions == null) {
+            return false;
+        }
+
+        Boolean permission = mPermissions.mPostMessage;
+        if (permission == null) {
+            return false;
+        }
+
+        return permission;
     }
 
     @Override
     public boolean canUploadAttachment() {
-        return checkPermission("upload_attachment");
+        if (mPermissions == null) {
+            return false;
+        }
+
+        Boolean permission = mPermissions.mUploadAttachment;
+        if (permission == null) {
+            return false;
+        }
+
+        return permission;
     }
 
     @Override
@@ -111,5 +144,21 @@ public class ApiConversation extends ApiDiscussion {
                 .and(ApiConstants.URL_CONVERSATION_MESSAGES_PARAM_MESSAGE_BODY, bodyPlainText)
                 .and(ApiConstants.URL_CONVERSATION_MESSAGES_PARAM_ATTACHMENT_HASH, attachmentHash)
                 .and(ApiConstants.PARAM_FIELDS_INCLUDE, "message_id");
+    }
+
+
+    @SuppressWarnings("unused")
+    static class Links extends ApiModel {
+        @SerializedName("permalink")
+        String mPermalink;
+    }
+
+    @SuppressWarnings("unused")
+    static class Permissions extends ApiModel {
+        @SerializedName("reply")
+        Boolean mPostMessage;
+
+        @SerializedName("upload_attachment")
+        Boolean mUploadAttachment;
     }
 }

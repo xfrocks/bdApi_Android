@@ -19,6 +19,9 @@ public class ApiConversationMessage extends ApiDiscussionMessage {
     @SerializedName("message_body_plain_text")
     private String mBodyPlainText;
 
+    @SerializedName("links")
+    private Links mLinks;
+
     @Override
     public Integer getId() {
         return mId;
@@ -36,7 +39,11 @@ public class ApiConversationMessage extends ApiDiscussionMessage {
 
     @Override
     public String getCreatorAvatar() {
-        return getLink("creator_avatar");
+        if (mLinks == null) {
+            return null;
+        }
+
+        return mLinks.mCreatorAvatar;
     }
 
     @Override
@@ -47,5 +54,11 @@ public class ApiConversationMessage extends ApiDiscussionMessage {
     @Override
     public String getBodyPlainText() {
         return mBodyPlainText;
+    }
+
+    @SuppressWarnings("unused")
+    static class Links extends ApiModel {
+        @SerializedName("creator_avatar")
+        String mCreatorAvatar;
     }
 }

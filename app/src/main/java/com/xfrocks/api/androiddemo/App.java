@@ -86,6 +86,7 @@ public class App extends MultiDexApplication {
         return BuildConfig.FEATURE_CONFIRM_SIGN_IN_WITH_REMEMBER > 0;
     }
 
+    @SuppressWarnings("SameReturnValue")
     public static int getFeatureAttachmentResize() {
         return BuildConfig.FEATURE_ATTACHMENT_RESIZE;
     }

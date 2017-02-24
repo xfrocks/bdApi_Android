@@ -24,6 +24,7 @@ public class ApiUser extends ApiModel {
     @SerializedName("user_dob_day")
     private Integer mDobDay;
 
+    @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
     @SerializedName("associatable")
     private Map<Integer, ApiUser> mAssociatable;
 
@@ -33,7 +34,9 @@ public class ApiUser extends ApiModel {
     @SerializedName("extra_timestamp")
     private long mExtraTimestamp;
 
-    @Override
+    @SerializedName("links")
+    private Links mLinks;
+
     public Integer getId() {
         return mId;
     }
@@ -83,7 +86,16 @@ public class ApiUser extends ApiModel {
     }
 
     public String getAvatar() {
-        return getLink("avatar_big");
+        if (mLinks == null) {
+            return null;
+        }
+
+        return mLinks.mAvatar;
     }
 
+    @SuppressWarnings("unused")
+    static class Links extends ApiModel {
+        @SerializedName("avatar_big")
+        String mAvatar;
+    }
 }

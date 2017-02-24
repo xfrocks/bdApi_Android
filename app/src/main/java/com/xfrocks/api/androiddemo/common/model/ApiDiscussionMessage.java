@@ -7,6 +7,8 @@ abstract public class ApiDiscussionMessage extends ApiModel {
     @SerializedName("attachments")
     private ApiAttachment[] mAttachments;
 
+    abstract public Integer getId();
+
     abstract public Integer getCreatorUserId();
 
     abstract public String getCreatorName();

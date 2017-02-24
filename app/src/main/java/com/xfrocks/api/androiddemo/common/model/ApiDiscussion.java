@@ -3,6 +3,8 @@ package com.xfrocks.api.androiddemo.common.model;
 import com.xfrocks.api.androiddemo.common.Api;
 
 abstract public class ApiDiscussion extends ApiModel {
+    abstract public Integer getId();
+
     abstract public String getTitle();
 
     abstract public String getCreatorName();
@@ -12,6 +14,8 @@ abstract public class ApiDiscussion extends ApiModel {
     abstract public Integer getCreateDate();
 
     abstract public ApiDiscussionMessage getFirstMessage();
+
+    abstract public String getPermalink();
 
     abstract public boolean canPostMessage();
 

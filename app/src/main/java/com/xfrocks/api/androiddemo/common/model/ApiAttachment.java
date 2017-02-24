@@ -10,7 +10,9 @@ public class ApiAttachment extends ApiModel {
     @SerializedName("filename")
     private String mFileName;
 
-    @Override
+    @SerializedName("links")
+    private Links mLinks;
+
     public Integer getId() {
         return mId;
     }
@@ -19,8 +21,28 @@ public class ApiAttachment extends ApiModel {
         return mFileName;
     }
 
-    public String getThumbnail() {
-        return getLink("thumbnail");
+    public String getPermalink() {
+        if (mLinks == null) {
+            return null;
+        }
+
+        return mLinks.mPermalink;
     }
 
+    public String getThumbnail() {
+        if (mLinks == null) {
+            return null;
+        }
+
+        return mLinks.mThumbnail;
+    }
+
+    @SuppressWarnings("unused")
+    static class Links extends ApiModel {
+        @SerializedName("permalink")
+        String mPermalink;
+
+        @SerializedName("thumbnail")
+        String mThumbnail;
+    }
 }
